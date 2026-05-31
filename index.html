@@ -248,7 +248,7 @@ textarea{resize:vertical;min-height:56px}
     <input type="text" id="c-fix-other-txt" placeholder="Specify..." style="margin-top:10px;font-size:14px">
   </div></div>
   <div class="total-bar"><span class="tl">Total Invoice</span><span class="tv" id="f-total">$0.00</span></div>
-  <div class="pdf-hint"><strong>📄 Saving on iPhone</strong>PDF opens — tap <strong>Share ↑ → Save to Files</strong> or send via Mail.</div>
+  <div class="pdf-hint"><strong>📄 How it works on iPhone</strong>Tap Generate PDF → Safari opens the PDF → tap <strong>Share ↑ → Save to Files</strong> or Mail → tap <strong>Back</strong> to return to the app. Your case auto-saves before navigating.</div>
   <button class="gen-btn" onclick="saveCase()" style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f);margin-bottom:10px">💾 Save Case</button>
   <button class="gen-btn" onclick="generatePDF()">⬇ Generate PDF</button>
   <div id="saved-cases-wrap" style="margin-top:14px"></div>
@@ -613,16 +613,15 @@ async function generatePDF(){
     });
     const total=items.reduce((s,it)=>s+it.price*it.qty,0);
     s2('Total Invoice','$'+total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
-    const filled=await pdfDoc.save();hideOverlay();
-    // Use Blob URL — works on iOS Safari (data: URLs are blocked)
+    const filled=await pdfDoc.save();
+    // Save case automatically before navigating away
+    saveCase();
+    hideOverlay();
+    // iOS Safari blocks window.open() inside async — navigate current tab instead.
+    // localStorage saves everything so Back button restores full state.
     const blob=new Blob([filled],{type:'application/pdf'});
     const url=URL.createObjectURL(blob);
-    // Try opening in new tab; if blocked, navigate current tab
-    const newTab=window.open(url,'_blank');
-    if(!newTab||newTab.closed||typeof newTab.closed==='undefined'){
-      window.location.href=url;
-    }
-    showToast('PDF ready — tap Share ↑ to save');
+    window.location.href=url;
   }catch(e){hideOverlay();showToast('Error: '+e.message);console.error(e);}
 }
 
