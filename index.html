@@ -597,6 +597,28 @@ async function generatePDF(){
     const pdfDoc=await PDFLib.PDFDocument.load(pdfBytes,{ignoreEncryption:true});
     const form=pdfDoc.getForm();
     function s2(n,v,sz){try{const f=form.getTextField(n);f.setText(v||'');if(sz)f.setFontSize(sz);}catch(e){}}
+    function chk(n,checked){try{const f=form.getCheckBox(n);if(checked)f.check();else f.uncheck();}catch(e){}}
+    // checkboxes
+    chk('High Energy',document.getElementById('c-high').checked);
+    chk('Fragility',document.getElementById('c-frag').checked);
+    chk('Oncology',document.getElementById('c-onco').checked);
+    chk('Primary/Revision Total Hip',document.getElementById('c-hip').checked);
+    chk('Pelvic Hardware Revision',document.getElementById('c-hwrev').checked);
+    chk('Other Procedure Type',document.getElementById('c-proc-other').checked);
+    chk('Male',document.getElementById('c-male').checked);
+    chk('Female',document.getElementById('c-female').checked);
+    chk('Under 65',document.getElementById('c-u65').checked);
+    chk('65 and older',document.getElementById('c-65p').checked);
+    chk('Anterior Ring',document.getElementById('c-ant-ring').checked);
+    chk('Posterior Ring',document.getElementById('c-post-ring').checked);
+    chk('Dysmorphic',document.getElementById('c-dysmorphic').checked);
+    chk('LC2',document.getElementById('c-lc2').checked);
+    chk('Anterior Column',document.getElementById('c-ant-col').checked);
+    chk('Posterior Column',document.getElementById('c-post-col').checked);
+    chk('Straight screws',document.getElementById('c-straight').checked);
+    chk('Bone Plate',document.getElementById('c-boneplate').checked);
+    chk('External Fixator',document.getElementById('c-extfix').checked);
+    chk('Other Fixation',document.getElementById('c-fix-other').checked);
     s2('Surgeon Name',surgeon.name);s2('Agent Name',rep.agent||'');s2('Hosp Name',surgeon.hospital);s2('City, State',surgeon.city);
     s2('Rep Name, Number, Email',(rep.name||'')+' | '+(rep.phone||'')+' | '+(rep.email||''));
     s2('Date of Surgery',dateStr);s2('Hosp. PO',document.getElementById('f-po').value);
