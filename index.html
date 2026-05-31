@@ -248,8 +248,10 @@ textarea{resize:vertical;min-height:56px}
     <input type="text" id="c-fix-other-txt" placeholder="Specify..." style="margin-top:10px;font-size:14px">
   </div></div>
   <div class="total-bar"><span class="tl">Total Invoice</span><span class="tv" id="f-total">$0.00</span></div>
-  <div class="pdf-hint"><strong>📄 Saving on iPhone</strong>PDF opens in a new tab → <strong>Share ↑ → Save to Files</strong> or send via Mail.</div>
+  <div class="pdf-hint"><strong>📄 Saving on iPhone</strong>PDF opens — tap <strong>Share ↑ → Save to Files</strong> or send via Mail.</div>
+  <button class="gen-btn" onclick="saveCase()" style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f);margin-bottom:10px">💾 Save Case</button>
   <button class="gen-btn" onclick="generatePDF()">⬇ Generate PDF</button>
+  <div id="saved-cases-wrap" style="margin-top:14px"></div>
 </div>
 
 <!-- SETTINGS PAGE -->
@@ -612,15 +614,14 @@ async function generatePDF(){
     const total=items.reduce((s,it)=>s+it.price*it.qty,0);
     s2('Total Invoice','$'+total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
     const filled=await pdfDoc.save();hideOverlay();
-    // chunk conversion to avoid max call stack exceeded on large PDFs
-    const bytes=new Uint8Array(filled);
-    let b64='';
-    const chunk=8192;
-    for(let i=0;i<bytes.length;i+=chunk){
-      b64+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));
+    // Use Blob URL — works on iOS Safari (data: URLs are blocked)
+    const blob=new Blob([filled],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    // Try opening in new tab; if blocked, navigate current tab
+    const newTab=window.open(url,'_blank');
+    if(!newTab||newTab.closed||typeof newTab.closed==='undefined'){
+      window.location.href=url;
     }
-    b64=btoa(b64);
-    window.open('data:application/pdf;base64,'+b64,'_blank');
     showToast('PDF ready — tap Share ↑ to save');
   }catch(e){hideOverlay();showToast('Error: '+e.message);console.error(e);}
 }
@@ -629,6 +630,102 @@ async function generatePDF(){
 function showOverlay(msg){document.getElementById('overlay-msg').textContent=msg;document.getElementById('overlay').classList.add('show');}
 function hideOverlay(){document.getElementById('overlay').classList.remove('show');}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ── SAVED CASES ──
+function saveCase(){
+  const s=loadSettings();
+  const surgeon=s.surgeons[selectedSurgeon]||{name:'Unknown'};
+  const dateVal=document.getElementById('f-date').value;
+  const dateStr=dateVal?(()=>{const[y,m,d]=dateVal.split('-');return m+'-'+d+'-'+y.slice(2)})():'No date';
+  const caseName=surgeon.name+' · '+dateStr;
+  const caseData={
+    id:Date.now(),
+    name:caseName,
+    surgeon:selectedSurgeon,
+    items:JSON.parse(JSON.stringify(items)),
+    form:{
+      date:dateVal,
+      po:document.getElementById('f-po').value,
+      patient:document.getElementById('f-patient').value,
+      notes:document.getElementById('f-notes').value,
+      sig:document.getElementById('f-sig').value,
+    },
+    checks:{}
+  };
+  ['c-high','c-frag','c-onco','c-hip','c-hwrev','c-proc-other','c-proc-other-txt',
+   'c-male','c-female','c-u65','c-65p',
+   'c-ant-ring','c-post-ring','c-dysmorphic','c-lc2','c-ant-col','c-post-col',
+   'c-straight','c-boneplate','c-extfix','c-fix-other','c-fix-other-txt'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) caseData.checks[id]=el.type==='checkbox'?el.checked:el.value;
+  });
+  const cases=JSON.parse(localStorage.getItem('cf_cases')||'[]');
+  cases.unshift(caseData);
+  if(cases.length>20) cases.pop(); // keep last 20
+  localStorage.setItem('cf_cases',JSON.stringify(cases));
+  renderSavedCases();
+  showToast('Case saved: '+caseName);
+}
+
+function loadCase(id){
+  const cases=JSON.parse(localStorage.getItem('cf_cases')||'[]');
+  const c=cases.find(x=>x.id===id);
+  if(!c) return;
+  if(!confirm('Load "'+c.name+'"? This will replace current items and form data.')) return;
+  // restore items
+  items=c.items||[];
+  renderItems();updateTotal();saveItems();
+  // restore surgeon
+  selectedSurgeon=c.surgeon||0;
+  renderSurgeonBtns();
+  // restore form
+  if(c.form){
+    document.getElementById('f-date').value=c.form.date||'';
+    document.getElementById('f-po').value=c.form.po||'';
+    document.getElementById('f-patient').value=c.form.patient||'';
+    document.getElementById('f-notes').value=c.form.notes||'';
+    document.getElementById('f-sig').value=c.form.sig||'';
+  }
+  if(c.checks){
+    Object.entries(c.checks).forEach(([id,val])=>{
+      const el=document.getElementById(id);
+      if(!el) return;
+      if(el.type==='checkbox') el.checked=val; else el.value=val;
+    });
+  }
+  saveFormFields();
+  showToast('Loaded: '+c.name);
+}
+
+function deleteCase(id){
+  if(!confirm('Delete this saved case?')) return;
+  let cases=JSON.parse(localStorage.getItem('cf_cases')||'[]');
+  cases=cases.filter(x=>x.id!==id);
+  localStorage.setItem('cf_cases',JSON.stringify(cases));
+  renderSavedCases();
+}
+
+function renderSavedCases(){
+  const wrap=document.getElementById('saved-cases-wrap');
+  if(!wrap) return;
+  const cases=JSON.parse(localStorage.getItem('cf_cases')||'[]');
+  if(!cases.length){wrap.innerHTML='';return;}
+  wrap.innerHTML=`
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Saved Cases</div>
+    ${cases.map(c=>`
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:11px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:700;font-size:13px;color:var(--blue)">${c.name}</div>
+          <div style="font-size:11px;color:var(--muted)">${(c.items||[]).length} items · $${(c.items||[]).reduce((s,it)=>s+it.price*it.qty,0).toLocaleString()}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="loadCase(${c.id})" style="padding:6px 10px;background:#e8f2ff;color:var(--blue2);border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">Load</button>
+          <button onclick="deleteCase(${c.id})" style="padding:6px 10px;background:#fee2e2;color:#c53030;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">Del</button>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
 
 // ── FORM FIELD PERSISTENCE ──
 const FORM_FIELDS=['f-date','f-po','f-patient','f-notes','f-sig',
@@ -665,8 +762,7 @@ document.addEventListener('input',function(e){if(FORM_FIELDS.includes(e.target.i
 items=loadItems();
 renderItems();
 renderSurgeonBtns();
-// load form fields after a tick so the DOM is ready
-setTimeout(loadFormFields,50);
+setTimeout(()=>{loadFormFields();renderSavedCases();},50);
 </script>
 </body>
 </html>
