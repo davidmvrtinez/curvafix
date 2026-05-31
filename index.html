@@ -457,7 +457,7 @@ async function onCode(raw){
 }
 
 function commitItem(item){
-  items.push(item);renderItems();updateTotal();
+  items.push(item);renderItems();updateTotal();saveItems();
   setStatus('✓ '+item.name,'ok');
   showToast('✓ '+item.name);
   setTimeout(()=>{ if(scanning) setStatus('Ready — scan next barcode','active'); },2500);
@@ -529,8 +529,10 @@ function addManualItem(){
 }
 
 // ── ITEMS ──
-function removeItem(i){items.splice(i,1);renderItems();updateTotal();}
-function clearItems(){if(!items.length)return;if(confirm('Clear all items?')){items=[];renderItems();updateTotal();}}
+function saveItems(){localStorage.setItem('cf_items',JSON.stringify(items));}
+function loadItems(){try{return JSON.parse(localStorage.getItem('cf_items')||'[]');}catch(e){return[];}}
+function removeItem(i){items.splice(i,1);renderItems();updateTotal();saveItems();}
+function clearItems(){if(!items.length)return;if(confirm('Clear all items?')){items=[];renderItems();updateTotal();saveItems();}}
 function renderItems(){
   const el=document.getElementById('items-list');
   document.getElementById('item-count').textContent=items.length;
@@ -610,7 +612,14 @@ async function generatePDF(){
     const total=items.reduce((s,it)=>s+it.price*it.qty,0);
     s2('Total Invoice','$'+total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
     const filled=await pdfDoc.save();hideOverlay();
-    const b64=btoa(String.fromCharCode(...new Uint8Array(filled)));
+    // chunk conversion to avoid max call stack exceeded on large PDFs
+    const bytes=new Uint8Array(filled);
+    let b64='';
+    const chunk=8192;
+    for(let i=0;i<bytes.length;i+=chunk){
+      b64+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));
+    }
+    b64=btoa(b64);
     window.open('data:application/pdf;base64,'+b64,'_blank');
     showToast('PDF ready — tap Share ↑ to save');
   }catch(e){hideOverlay();showToast('Error: '+e.message);console.error(e);}
@@ -621,8 +630,43 @@ function showOverlay(msg){document.getElementById('overlay-msg').textContent=msg
 function hideOverlay(){document.getElementById('overlay').classList.remove('show');}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
+// ── FORM FIELD PERSISTENCE ──
+const FORM_FIELDS=['f-date','f-po','f-patient','f-notes','f-sig',
+  'c-high','c-frag','c-onco','c-hip','c-hwrev','c-proc-other','c-proc-other-txt',
+  'c-male','c-female','c-u65','c-65p',
+  'c-ant-ring','c-post-ring','c-dysmorphic','c-lc2','c-ant-col','c-post-col',
+  'c-straight','c-boneplate','c-extfix','c-fix-other','c-fix-other-txt'];
+
+function saveFormFields(){
+  const data={};
+  FORM_FIELDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    data[id]=el.type==='checkbox'?el.checked:el.value;
+  });
+  localStorage.setItem('cf_form',JSON.stringify(data));
+}
+function loadFormFields(){
+  try{
+    const data=JSON.parse(localStorage.getItem('cf_form')||'{}');
+    FORM_FIELDS.forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el||data[id]===undefined)return;
+      if(el.type==='checkbox') el.checked=data[id];
+      else el.value=data[id];
+    });
+  }catch(e){}
+}
+// auto-save form fields on any change
+document.addEventListener('change',function(e){if(FORM_FIELDS.includes(e.target.id))saveFormFields();});
+document.addEventListener('input',function(e){if(FORM_FIELDS.includes(e.target.id))saveFormFields();});
+
 // ── INIT ──
-renderItems();renderSurgeonBtns();
+items=loadItems();
+renderItems();
+renderSurgeonBtns();
+// load form fields after a tick so the DOM is ready
+setTimeout(loadFormFields,50);
 </script>
 </body>
 </html>
