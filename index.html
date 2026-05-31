@@ -7,7 +7,7 @@
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
-:root{--blue:#1a3a5c;--blue2:#2d6a9f;--accent:#5bc8f5;--bg:#f4f6f9;--card:#fff;--border:#dde3ec;--text:#1a1a2e;--muted:#6b7c93;color-scheme:light}
+:root{--blue:#1a3a5c;--blue2:#2d6a9f;--accent:#5bc8f5;--green:#22863a;--bg:#f4f6f9;--card:#fff;--border:#dde3ec;--text:#1a1a2e;--muted:#6b7c93;color-scheme:light}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
 .nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,.08);padding-bottom:env(safe-area-inset-bottom)}
@@ -23,93 +23,112 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .card-hdr{background:#f0f4f8;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .card-body{padding:14px}
 label.lbl{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-input[type=text],input[type=date],input[type=number],textarea,select{width:100%;padding:10px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:16px;color:var(--text);background:#fff;font-family:inherit;-webkit-appearance:none;appearance:none}
+input[type=text],input[type=date],input[type=number],textarea,select{width:100%;padding:10px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:16px;color:var(--text);background:#fff;font-family:inherit;-webkit-appearance:none}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue2)}
-input[readonly]{background:#f8fafc;color:var(--muted)}
 textarea{resize:vertical;min-height:56px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 
-/* ── SCANNER ── */
-.scanner-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;width:100%;aspect-ratio:4/3}
-#reader{width:100%;height:100%}
-#reader video{width:100%;height:100%;object-fit:cover}
-/* aim overlay for 1D barcodes */
-.aim-overlay{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
-.aim-box{width:82%;height:18%;border:2.5px solid var(--accent);border-radius:8px;position:relative;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
-.aim-line{position:absolute;top:50%;left:4%;right:4%;height:2px;background:rgba(91,200,245,.8);transform:translateY(-50%);animation:pulse 1.5s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
-.aim-corner{position:absolute;width:14px;height:14px;border-color:var(--accent);border-style:solid}
-.aim-corner.tl{top:-2px;left:-2px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
-.aim-corner.tr{top:-2px;right:-2px;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
-.aim-corner.bl{bottom:-2px;left:-2px;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
-.aim-corner.br{bottom:-2px;right:-2px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
-.scan-status{text-align:center;padding:8px 0 2px;font-size:12px;color:var(--muted)}
-.scan-status.found{color:#22863a;font-weight:700}
-.scan-btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;-webkit-appearance:none}
-.scan-btn.start{background:var(--blue2);color:#fff}
-.scan-btn.stop{background:#e53e3e;color:#fff}
-/* photo fallback */
+/* ── SCANNER BOX ── */
+.scanner-outer{border-radius:12px;overflow:hidden;position:relative;background:#000;transition:box-shadow .3s}
+.scanner-outer.success{box-shadow:0 0 0 4px #22c55e,0 0 24px rgba(34,197,94,.5);background:#000}
+.scanner-outer.error{box-shadow:0 0 0 4px #ef4444}
+#reader{width:100%;min-height:220px}
+#reader video{width:100%!important;height:auto!important;object-fit:cover}
+/* kill html5-qrcode's own UI chrome */
+#reader>div:not(:has(video)){display:none!important}
+/* aim reticle */
+.reticle{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.reticle-box{width:80%;height:22%;border:2px solid rgba(91,200,245,.9);border-radius:6px;position:relative;box-shadow:0 0 0 9999px rgba(0,0,0,.42)}
+.reticle-line{position:absolute;left:5%;right:5%;top:50%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);transform:translateY(-50%);animation:sweep 2s ease-in-out infinite}
+@keyframes sweep{0%,100%{opacity:.3}50%{opacity:1}}
+.reticle-c{position:absolute;width:12px;height:12px;border-color:var(--accent);border-style:solid}
+.reticle-c.tl{top:-2px;left:-2px;border-width:2px 0 0 2px;border-radius:3px 0 0 0}
+.reticle-c.tr{top:-2px;right:-2px;border-width:2px 2px 0 0;border-radius:0 3px 0 0}
+.reticle-c.bl{bottom:-2px;left:-2px;border-width:0 0 2px 2px;border-radius:0 0 0 3px}
+.reticle-c.br{bottom:-2px;right:-2px;border-width:0 2px 2px 0;border-radius:0 0 3px 0}
+.scan-status{text-align:center;padding:8px 4px;font-size:13px;color:var(--muted);min-height:36px;display:flex;align-items:center;justify-content:center;gap:6px}
+.scan-status.ok{color:var(--green);font-weight:700}
+.scan-status.err{color:#dc2626}
+.scan-btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-appearance:none;margin-bottom:6px}
+.scan-btn.go{background:var(--blue2);color:#fff}
+.scan-btn.stop{background:#dc2626;color:#fff}
+.photo-link{text-align:center;margin-top:2px}
+.photo-link button{background:none;border:none;color:var(--blue2);font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline}
 #photo-input{display:none}
-.photo-fallback{text-align:center;margin-top:8px}
-.photo-fallback button{background:none;border:none;color:var(--blue2);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;font-family:inherit}
 
-/* ── ITEMS ── */
+/* ── SCANNED LIST ── */
+.items-scroll{max-height:340px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .item-card{background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;position:relative}
-.item-card .item-name{font-weight:700;font-size:13px;color:var(--blue);margin-bottom:3px;padding-right:32px}
-.item-card .item-meta{font-size:11px;color:var(--muted);line-height:1.6}
-.item-card .item-controls{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.item-card:last-child{margin-bottom:0}
+.item-card.new{animation:pop .35s ease}
+@keyframes pop{0%{transform:scale(.96);opacity:.6}100%{transform:scale(1);opacity:1}}
+.item-name{font-weight:700;font-size:13px;color:var(--blue);padding-right:32px;margin-bottom:2px}
+.item-meta{font-size:11px;color:var(--muted);line-height:1.6}
+.item-controls{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
 .del-btn{position:absolute;top:8px;right:8px;background:#fee2e2;color:#c53030;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:700}
-.disp-select{flex:1;min-width:0;padding:7px 8px;font-size:12px;border-radius:7px;border:1.5px solid var(--border);background:#fff;font-family:inherit;-webkit-appearance:none}
-.qty-input{width:58px;padding:7px 8px;font-size:14px;text-align:center;border:1.5px solid var(--border);border-radius:7px;-webkit-appearance:none}
-.price-tag{font-size:13px;font-weight:700;color:var(--blue2);white-space:nowrap;margin-left:auto}
-.add-btn{width:100%;padding:12px;background:#f0f4f8;color:var(--blue);border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-appearance:none}
+.disp-sel{flex:1;min-width:0;padding:7px 8px;font-size:12px;border-radius:7px;border:1.5px solid var(--border);background:#fff;font-family:inherit;-webkit-appearance:none}
+.qty-inp{width:58px;padding:7px 8px;font-size:14px;text-align:center;border:1.5px solid var(--border);border-radius:7px;-webkit-appearance:none}
+.price-tag{font-size:13px;font-weight:700;color:var(--blue2);margin-left:auto;white-space:nowrap}
+.empty-msg{text-align:center;color:var(--muted);font-size:13px;padding:18px 0}
+.clear-link{font-size:10px;cursor:pointer;color:var(--blue2);font-weight:700}
 
-/* ── SURGEON ── */
+/* manual */
+.manual-toggle{width:100%;padding:10px;background:#f0f4f8;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;color:var(--blue2);cursor:pointer;font-family:inherit;-webkit-appearance:none;text-align:left}
+.manual-body{display:none;padding-top:12px}
+.add-btn{width:100%;padding:12px;background:var(--blue2);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-appearance:none}
+
+/* surgeon */
 .surg-row{display:flex;gap:8px;flex-wrap:wrap}
-.surg-btn{flex:1;min-width:120px;padding:10px 8px;border:2px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;text-align:left}
+.surg-btn{flex:1;min-width:110px;padding:10px 8px;border:2px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;text-align:left}
 .surg-btn.active{border-color:var(--blue2);background:#e8f2ff}
-.surg-btn .sn{font-weight:700;font-size:13px;color:var(--blue)}
-.surg-btn .sh{font-size:11px;color:var(--muted);margin-top:2px}
+.sn{font-weight:700;font-size:13px;color:var(--blue)}
+.sh{font-size:11px;color:var(--muted);margin-top:2px}
 
-/* ── CHECKBOXES ── */
+/* checkboxes */
 .chk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .chk-item{display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0}
-.chk-item input[type=checkbox]{width:20px;height:20px;accent-color:var(--blue2);cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;border:2px solid var(--border);border-radius:4px;background:#fff;position:relative}
+.chk-item input[type=checkbox]{width:20px;height:20px;flex-shrink:0;-webkit-appearance:none;appearance:none;border:2px solid var(--border);border-radius:4px;background:#fff;position:relative;cursor:pointer}
 .chk-item input[type=checkbox]:checked{background:var(--blue2);border-color:var(--blue2)}
 .chk-item input[type=checkbox]:checked::after{content:"✓";position:absolute;top:-1px;left:2px;color:#fff;font-size:14px;font-weight:700}
 .chk-item span{font-size:14px;line-height:1.3}
+.sec-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:12px 0 8px}
 
-/* ── TOTAL / GENERATE ── */
+/* total / generate */
 .total-bar{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border-radius:12px;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.total-bar .tl{font-size:13px;opacity:.85}
-.total-bar .tv{font-size:24px;font-weight:800}
+.tv{font-size:24px;font-weight:800}.tl{font-size:13px;opacity:.85}
 .gen-btn{width:100%;padding:16px;background:linear-gradient(135deg,#1a6b3c,#27a35a);color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-appearance:none;margin-bottom:10px}
 .gen-btn:active{opacity:.85}
 .pdf-hint{background:#fff8e1;border:1.5px solid #f0c040;border-radius:10px;padding:12px 14px;font-size:12px;color:#7a5c00;line-height:1.6;margin-bottom:14px}
-.pdf-hint strong{display:block;margin-bottom:3px;font-size:13px}
+.pdf-hint strong{display:block;margin-bottom:2px;font-size:13px}
 
-/* ── SETTINGS ── */
+/* settings */
 .profile-card{background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
-.profile-card .pname{font-weight:700;font-size:14px;color:var(--blue)}
-.profile-card .phospital{font-size:11px;color:var(--muted);margin-top:2px}
+.pname{font-weight:700;font-size:14px;color:var(--blue)}
+.phospital{font-size:11px;color:var(--muted);margin-top:2px}
 .profile-actions{display:flex;gap:6px;flex-shrink:0}
 .edit-btn{padding:7px 12px;background:#e8f2ff;color:var(--blue2);border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
 .del-btn2{padding:7px 12px;background:#fee2e2;color:#c53030;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
 .save-btn{width:100%;padding:13px;background:var(--blue2);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:10px;-webkit-appearance:none}
 
-/* ── OVERLAY ── */
+/* overlay / toast / modal */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center}
 .overlay.show{display:flex}
-.overlay-box{background:#fff;border-radius:16px;padding:28px 32px;text-align:center;width:240px}
-.spinner{width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:var(--blue2);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+.overlay-box{background:#fff;border-radius:16px;padding:28px 24px;text-align:center;width:270px}
+.spinner{width:38px;height:38px;border:4px solid #e2e8f0;border-top-color:var(--blue2);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .overlay-box p{font-size:14px;color:var(--muted)}
-
-/* ── TOAST ── */
-.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#1a3a5c;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.modal.show{display:flex}
+.modal-box{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:500px}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.5}
+.modal-btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px;-webkit-appearance:none}
+.modal-btn.primary{background:var(--blue2);color:#fff}
+.modal-btn.danger{background:#fee2e2;color:#dc2626}
+.modal-btn.ghost{background:#f0f4f8;color:var(--muted)}
+.toast{position:fixed;top:68px;left:50%;transform:translateX(-50%);background:#1a3a5c;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:88vw;text-align:center}
 .toast.show{opacity:1}
-.sec-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:14px 0 8px}
 </style>
 </head>
 <body>
@@ -121,64 +140,71 @@ textarea{resize:vertical;min-height:56px}
 
 <!-- SCANNER PAGE -->
 <div class="page active" id="page-scan">
+
+  <!-- VIEWFINDER -->
   <div class="card">
     <div class="card-hdr">Live Barcode Scanner</div>
-    <div class="card-body" style="padding:12px">
-      <div class="scanner-wrap">
+    <div class="card-body" style="padding:10px">
+      <div class="scanner-outer" id="scanner-outer">
         <div id="reader"></div>
-        <div class="aim-overlay">
-          <div class="aim-box">
-            <div class="aim-line"></div>
-            <div class="aim-corner tl"></div>
-            <div class="aim-corner tr"></div>
-            <div class="aim-corner bl"></div>
-            <div class="aim-corner br"></div>
+        <div class="reticle">
+          <div class="reticle-box">
+            <div class="reticle-line"></div>
+            <div class="reticle-c tl"></div><div class="reticle-c tr"></div>
+            <div class="reticle-c bl"></div><div class="reticle-c br"></div>
           </div>
         </div>
       </div>
       <div class="scan-status" id="scan-status">Tap Start to activate camera</div>
-      <button class="scan-btn start" id="scan-toggle" onclick="toggleScanner()">▶ Start Scanner</button>
-      <div class="photo-fallback">
+      <button class="scan-btn go" id="scan-toggle" onclick="toggleScanner()">▶ Start Scanner</button>
+      <div class="photo-link">
         <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(this)">
-        <button onclick="document.getElementById('photo-input').click()">📷 Or take a photo instead</button>
+        <button onclick="document.getElementById('photo-input').click()">📷 Take a photo instead</button>
       </div>
     </div>
   </div>
 
+  <!-- SCANNED ITEMS LIST (right under scanner) -->
   <div class="card">
     <div class="card-hdr">
-      <span>Scanned Items (<span id="item-count">0</span>)</span>
-      <span style="font-size:10px;cursor:pointer;color:var(--blue2);font-weight:700" onclick="clearItems()">Clear All</span>
+      <span>Scanned Items &nbsp;<span id="item-count" style="background:var(--blue2);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px">0</span></span>
+      <span class="clear-link" onclick="clearItems()">Clear All</span>
     </div>
-    <div class="card-body" id="items-list">
-      <div style="text-align:center;color:var(--muted);font-size:13px;padding:12px 0">No items yet — scan barcodes or add manually</div>
+    <div class="card-body" style="padding:10px 10px 4px">
+      <div class="items-scroll" id="items-list">
+        <div class="empty-msg">No items yet — scan barcodes or add manually below</div>
+      </div>
     </div>
-    <div class="card-body" style="border-top:1px solid var(--border)">
-      <div class="sec-label" style="margin-top:0">Manual Entry</div>
-      <div style="margin-bottom:8px">
-        <label class="lbl">REF # (auto-fills name & price)</label>
-        <input type="text" id="manual-ref" placeholder="e.g. CRS-075-130-LP" onblur="autofillRef()" autocapitalize="characters">
-      </div>
-      <div style="margin-bottom:8px">
-        <label class="lbl">Product Name</label>
-        <input type="text" id="manual-desc" placeholder="Product description">
-      </div>
-      <div class="row2" style="margin-bottom:8px">
-        <div><label class="lbl">LOT #</label><input type="text" id="manual-lot" placeholder="LOT"></div>
-        <div><label class="lbl">Expiration</label><input type="text" id="manual-exp" placeholder="YYYY-MM-DD"></div>
-      </div>
-      <div class="row2" style="margin-bottom:10px">
-        <div><label class="lbl">QTY</label><input type="number" id="manual-qty" min="1" value="1" inputmode="numeric"></div>
-        <div><label class="lbl">Disposition</label>
-          <select id="manual-disp">
-            <option value="implanted">Implanted</option>
-            <option value="opened_unused">Opened &amp; Unused</option>
-            <option value="implanted_removed">Implanted &amp; Removed</option>
-            <option value="blank">— leave blank</option>
-          </select>
+
+    <!-- MANUAL ENTRY (collapsed) -->
+    <div class="card-body" style="border-top:1px solid var(--border);padding-top:10px">
+      <button class="manual-toggle" onclick="toggleManual(this)">+ Add Manually</button>
+      <div class="manual-body" id="manual-body">
+        <div style="margin-bottom:8px;margin-top:12px">
+          <label class="lbl">REF # (auto-fills name & price)</label>
+          <input type="text" id="manual-ref" placeholder="e.g. CRS-075-130-LP" onblur="autofillRef()" autocapitalize="characters">
         </div>
+        <div style="margin-bottom:8px">
+          <label class="lbl">Product Name</label>
+          <input type="text" id="manual-desc" placeholder="Product description">
+        </div>
+        <div class="row2" style="margin-bottom:8px">
+          <div><label class="lbl">LOT #</label><input type="text" id="manual-lot" placeholder="LOT"></div>
+          <div><label class="lbl">Expiration</label><input type="text" id="manual-exp" placeholder="YYYY-MM-DD"></div>
+        </div>
+        <div class="row2" style="margin-bottom:10px">
+          <div><label class="lbl">QTY</label><input type="number" id="manual-qty" min="1" value="1" inputmode="numeric"></div>
+          <div><label class="lbl">Disposition</label>
+            <select id="manual-disp">
+              <option value="implanted">Implanted</option>
+              <option value="opened_unused">Opened &amp; Unused</option>
+              <option value="implanted_removed">Implanted &amp; Removed</option>
+              <option value="blank">— leave blank</option>
+            </select>
+          </div>
+        </div>
+        <button class="add-btn" onclick="addManualItem()">+ Add Item</button>
       </div>
-      <button class="add-btn" onclick="addManualItem()">+ Add Item</button>
     </div>
   </div>
 </div>
@@ -255,14 +281,8 @@ textarea{resize:vertical;min-height:56px}
       <input type="text" id="c-fix-other-txt" placeholder="Specify other..." style="margin-top:10px;font-size:14px">
     </div>
   </div>
-  <div class="total-bar">
-    <span class="tl">Total Invoice</span>
-    <span class="tv" id="f-total">$0.00</span>
-  </div>
-  <div class="pdf-hint">
-    <strong>📄 Saving on iPhone</strong>
-    PDF opens in a new tab → tap <strong>Share ↑ → Save to Files</strong> or share via Mail/Messages.
-  </div>
+  <div class="total-bar"><span class="tl">Total Invoice</span><span class="tv" id="f-total">$0.00</span></div>
+  <div class="pdf-hint"><strong>📄 Saving on iPhone</strong>PDF opens in a new tab → tap <strong>Share ↑ → Save to Files</strong> or share via Mail.</div>
   <button class="gen-btn" onclick="generatePDF()">⬇ Generate PDF</button>
 </div>
 
@@ -288,19 +308,19 @@ textarea{resize:vertical;min-height:56px}
       <div style="margin-bottom:10px"><label class="lbl">Surgeon Name</label><input type="text" id="s-surg-name" placeholder="e.g. Dr. Smith"></div>
       <div style="margin-bottom:10px"><label class="lbl">Hospital Name</label><input type="text" id="s-hosp-name" placeholder="e.g. HCA Florida Ocala"></div>
       <div style="margin-bottom:4px"><label class="lbl">City, State</label><input type="text" id="s-city-state" placeholder="e.g. Ocala, FL"></div>
-      <input type="hidden" id="s-edit-idx" value="">
+      <input type="hidden" id="s-edit-idx">
       <div style="display:flex;gap:8px">
         <button class="save-btn" onclick="saveSurgeon()">Save</button>
         <button class="save-btn" style="background:#6b7c93" onclick="hideSurgeonForm()">Cancel</button>
       </div>
     </div>
   </div>
-  <div style="text-align:center;font-size:11px;color:var(--muted);padding:8px 0">All data saved locally on this device</div>
+  <div style="text-align:center;font-size:11px;color:var(--muted);padding:6px 0">All data saved locally on this device</div>
 </div>
 
 <nav class="nav">
   <button class="nav-btn active" id="nav-scan" onclick="showPage('scan')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><line x1="16" y1="16" x2="21" y2="16"/><line x1="16" y1="16" x2="16" y2="21"/><line x1="21" y1="21" x2="21" y2="21"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><line x1="16" y1="16" x2="21" y2="16"/><line x1="16" y1="21" x2="21" y2="21"/><line x1="21" y1="16" x2="21" y2="21"/></svg>
     Scanner
   </button>
   <button class="nav-btn" id="nav-form" onclick="showPage('form')">
@@ -313,85 +333,75 @@ textarea{resize:vertical;min-height:56px}
   </button>
 </nav>
 
-<div class="overlay" id="overlay"><div class="overlay-box"><div class="spinner"></div><p id="overlay-msg">Processing...</p></div></div>
+<!-- DUPLICATE MODAL -->
+<div class="modal" id="dup-modal">
+  <div class="modal-box">
+    <div class="modal-title">Duplicate Scan</div>
+    <div class="modal-sub" id="dup-msg">This item was already scanned. What would you like to do?</div>
+    <button class="modal-btn primary" onclick="dupAction('add')">Add Again (scan another unit)</button>
+    <button class="modal-btn danger" onclick="dupAction('skip')">Skip (already have it)</button>
+    <button class="modal-btn ghost" onclick="dupAction('cancel')">Cancel</button>
+  </div>
+</div>
+
+<!-- PROCESSING OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="overlay-box"><div class="spinner"></div><p id="overlay-msg">Processing...</p></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-// ── PRICE LIST ──
-const PRICE_LIST = {
-  'CRS-075-090-LP':{name:'CurvaFix LP Implant 7.5x90mm',price:3950},
-  'CRS-075-100-LP':{name:'CurvaFix LP Implant 7.5x100mm',price:3950},
-  'CRS-075-110-LP':{name:'CurvaFix LP Implant 7.5x110mm',price:3950},
-  'CRS-075-120-LP':{name:'CurvaFix LP Implant 7.5x120mm',price:3950},
-  'CRS-075-130-LP':{name:'CurvaFix LP Implant 7.5x130mm',price:3950},
-  'CRS-075-140-LP':{name:'CurvaFix LP Implant 7.5x140mm',price:3950},
-  'CRS-075-150-LP':{name:'CurvaFix LP Implant 7.5x150mm',price:3950},
-  'CRS-075-160-LP':{name:'CurvaFix LP Implant 7.5x160mm',price:3950},
-  'CRS-075-170-LP':{name:'CurvaFix LP Implant 7.5x170mm',price:3950},
-  'CRS-075-180-LP':{name:'CurvaFix LP Implant 7.5x180mm',price:3950},
-  'CRS-075-190-LP':{name:'CurvaFix LP Implant 7.5x190mm',price:3950},
-  'CRS-075-200-LP':{name:'CurvaFix LP Implant 7.5x200mm',price:3950},
+const PRICE_LIST={
+  'CRS-075-090-LP':{name:'CurvaFix LP Implant 7.5x90mm',price:3950},'CRS-075-100-LP':{name:'CurvaFix LP Implant 7.5x100mm',price:3950},
+  'CRS-075-110-LP':{name:'CurvaFix LP Implant 7.5x110mm',price:3950},'CRS-075-120-LP':{name:'CurvaFix LP Implant 7.5x120mm',price:3950},
+  'CRS-075-130-LP':{name:'CurvaFix LP Implant 7.5x130mm',price:3950},'CRS-075-140-LP':{name:'CurvaFix LP Implant 7.5x140mm',price:3950},
+  'CRS-075-150-LP':{name:'CurvaFix LP Implant 7.5x150mm',price:3950},'CRS-075-160-LP':{name:'CurvaFix LP Implant 7.5x160mm',price:3950},
+  'CRS-075-170-LP':{name:'CurvaFix LP Implant 7.5x170mm',price:3950},'CRS-075-180-LP':{name:'CurvaFix LP Implant 7.5x180mm',price:3950},
+  'CRS-075-190-LP':{name:'CurvaFix LP Implant 7.5x190mm',price:3950},'CRS-075-200-LP':{name:'CurvaFix LP Implant 7.5x200mm',price:3950},
   'CRS-075-210-LP':{name:'CurvaFix LP Implant 7.5x210mm',price:3950},
-  'CRS-095-090-LP':{name:'CurvaFix LP Implant 9.5x90mm',price:3950},
-  'CRS-095-100-LP':{name:'CurvaFix LP Implant 9.5x100mm',price:3950},
-  'CRS-095-110-LP':{name:'CurvaFix LP Implant 9.5x110mm',price:3950},
-  'CRS-095-120-LP':{name:'CurvaFix LP Implant 9.5x120mm',price:3950},
-  'CRS-095-130-LP':{name:'CurvaFix LP Implant 9.5x130mm',price:3950},
-  'CRS-095-140-LP':{name:'CurvaFix LP Implant 9.5x140mm',price:3950},
-  'CRS-095-150-LP':{name:'CurvaFix LP Implant 9.5x150mm',price:3950},
-  'CRS-095-160-LP':{name:'CurvaFix LP Implant 9.5x160mm',price:3950},
-  'CRS-095-170-LP':{name:'CurvaFix LP Implant 9.5x170mm',price:3950},
-  'CRS-095-180-LP':{name:'CurvaFix LP Implant 9.5x180mm',price:3950},
-  'CRS-095-190-LP':{name:'CurvaFix LP Implant 9.5x190mm',price:3950},
-  'CRS-095-200-LP':{name:'CurvaFix LP Implant 9.5x200mm',price:3950},
+  'CRS-095-090-LP':{name:'CurvaFix LP Implant 9.5x90mm',price:3950},'CRS-095-100-LP':{name:'CurvaFix LP Implant 9.5x100mm',price:3950},
+  'CRS-095-110-LP':{name:'CurvaFix LP Implant 9.5x110mm',price:3950},'CRS-095-120-LP':{name:'CurvaFix LP Implant 9.5x120mm',price:3950},
+  'CRS-095-130-LP':{name:'CurvaFix LP Implant 9.5x130mm',price:3950},'CRS-095-140-LP':{name:'CurvaFix LP Implant 9.5x140mm',price:3950},
+  'CRS-095-150-LP':{name:'CurvaFix LP Implant 9.5x150mm',price:3950},'CRS-095-160-LP':{name:'CurvaFix LP Implant 9.5x160mm',price:3950},
+  'CRS-095-170-LP':{name:'CurvaFix LP Implant 9.5x170mm',price:3950},'CRS-095-180-LP':{name:'CurvaFix LP Implant 9.5x180mm',price:3950},
+  'CRS-095-190-LP':{name:'CurvaFix LP Implant 9.5x190mm',price:3950},'CRS-095-200-LP':{name:'CurvaFix LP Implant 9.5x200mm',price:3950},
   'CRS-095-210-LP':{name:'CurvaFix LP Implant 9.5x210mm',price:3950},
-  'CGK-001':{name:'CurvaFix Guidewire Kit',price:500},
-  'CGK-001-LP':{name:'CurvaFix LP Guidewire Kit',price:500},
-  'DWK-001':{name:'CurvaFix Drill Wire Kit',price:500},
-  'CFR-060-LP':{name:'CurvaFix 6.0mm Cannulated Flexible Drill',price:500},
-  'CFR-065-LP':{name:'CurvaFix 6.5mm Cannulated Flexible Drill',price:500},
-  'CFR-070-LP':{name:'CurvaFix 7.0mm Cannulated Flexible Drill',price:500},
-  'CFR-075-LP':{name:'CurvaFix 7.5mm Cannulated Flexible Drill',price:500},
-  'CFR-080-LP':{name:'CurvaFix 8.0mm Cannulated Flexible Drill',price:500},
-  'CFR-085-LP':{name:'CurvaFix 8.5mm Cannulated Flexible Drill',price:500},
-  'CGP-001-SP':{name:'CurvaFix Short 2.8mm Guide Pin',price:150},
-  'GPS-001-SP':{name:'CurvaFix Long Smooth 2.8mm Guide Pin',price:150},
+  'CGK-001':{name:'CurvaFix Guidewire Kit',price:500},'CGK-001-LP':{name:'CurvaFix LP Guidewire Kit',price:500},'DWK-001':{name:'CurvaFix Drill Wire Kit',price:500},
+  'CFR-060-LP':{name:'CurvaFix 6.0mm Flex Drill',price:500},'CFR-065-LP':{name:'CurvaFix 6.5mm Flex Drill',price:500},
+  'CFR-070-LP':{name:'CurvaFix 7.0mm Flex Drill',price:500},'CFR-075-LP':{name:'CurvaFix 7.5mm Flex Drill',price:500},
+  'CFR-080-LP':{name:'CurvaFix 8.0mm Flex Drill',price:500},'CFR-085-LP':{name:'CurvaFix 8.5mm Flex Drill',price:500},
+  'CGP-001-SP':{name:'CurvaFix Short 2.8mm Guide Pin',price:150},'GPS-001-SP':{name:'CurvaFix Long Smooth 2.8mm Guide Pin',price:150},
   'GPT-001-SP':{name:'CurvaFix Long Threaded 2.8mm Guide Pin',price:150},
-  'CGP-001':{name:'CurvaFix Guide Pin 2.8mm',price:125},
-  'GPS-001':{name:'CurvaFix Start Guide Pin Smooth',price:125},
-  'GPT-001':{name:'CurvaFix Start Guide Pin Threaded',price:125},
+  'CGP-001':{name:'CurvaFix Guide Pin 2.8mm',price:125},'GPS-001':{name:'CurvaFix Start Guide Pin Smooth',price:125},'GPT-001':{name:'CurvaFix Start Guide Pin Threaded',price:125},
 };
-const GTIN_MAP = {
-  '10850070500255':'CRS-075-090-LP','10850070500262':'CRS-075-100-LP','10850070500279':'CRS-075-110-LP',
-  '10850070500286':'CRS-075-120-LP','10850070500293':'CRS-075-130-LP','10850070500309':'CRS-075-140-LP',
-  '10850070500316':'CRS-075-150-LP','10850070500323':'CRS-075-160-LP','10850070500330':'CRS-075-170-LP',
-  '10850070500347':'CRS-075-180-LP','10850070500354':'CRS-075-190-LP','10850070500361':'CRS-075-200-LP',
-  '10850070500378':'CRS-075-210-LP','10850070500125':'CRS-095-090-LP','10850070500132':'CRS-095-100-LP',
-  '10850070500149':'CRS-095-110-LP','10850070500156':'CRS-095-120-LP','10850070500163':'CRS-095-130-LP',
-  '10850070500170':'CRS-095-140-LP','10850070500187':'CRS-095-150-LP','10850070500194':'CRS-095-160-LP',
-  '10850070500200':'CRS-095-170-LP','10850070500217':'CRS-095-180-LP','10850070500224':'CRS-095-190-LP',
+const GTIN_MAP={
+  '10850070500255':'CRS-075-090-LP','10850070500262':'CRS-075-100-LP','10850070500279':'CRS-075-110-LP','10850070500286':'CRS-075-120-LP',
+  '10850070500293':'CRS-075-130-LP','10850070500309':'CRS-075-140-LP','10850070500316':'CRS-075-150-LP','10850070500323':'CRS-075-160-LP',
+  '10850070500330':'CRS-075-170-LP','10850070500347':'CRS-075-180-LP','10850070500354':'CRS-075-190-LP','10850070500361':'CRS-075-200-LP',
+  '10850070500378':'CRS-075-210-LP','10850070500125':'CRS-095-090-LP','10850070500132':'CRS-095-100-LP','10850070500149':'CRS-095-110-LP',
+  '10850070500156':'CRS-095-120-LP','10850070500163':'CRS-095-130-LP','10850070500170':'CRS-095-140-LP','10850070500187':'CRS-095-150-LP',
+  '10850070500194':'CRS-095-160-LP','10850070500200':'CRS-095-170-LP','10850070500217':'CRS-095-180-LP','10850070500224':'CRS-095-190-LP',
   '10850070500231':'CRS-095-200-LP','10850070500248':'CRS-095-210-LP',
   '10850070500095':'CGK-001-LP','10855068008119':'CGK-001','10855068008126':'DWK-001',
-  '10850070500002':'CFR-060-LP','10850070500019':'CFR-065-LP','10850070500026':'CFR-070-LP',
-  '10850070500033':'CFR-075-LP','10850070500040':'CFR-080-LP','10850070500057':'CFR-085-LP',
+  '10850070500002':'CFR-060-LP','10850070500019':'CFR-065-LP','10850070500026':'CFR-070-LP','10850070500033':'CFR-075-LP',
+  '10850070500040':'CFR-080-LP','10850070500057':'CFR-085-LP',
   '10850070500064':'CGP-001-SP','10850070500071':'GPS-001-SP','10850070500088':'GPT-001-SP',
   '10855068008508':'GPS-001','10855068008515':'GPT-001','10855068008157':'CGP-001',
 };
 
-// ── STATE ──
-let items=[], scanner=null, scanning=false, lastCode='', lastCodeTime=0, selectedSurgeon=0;
+let items=[],scanner=null,scanning=false,lastRaw='',lastRawTime=0,selectedSurgeon=0;
+let pendingDupItem=null,dupResolve=null;
 
-// ── STORAGE ──
 function loadSettings(){
-  return JSON.parse(localStorage.getItem('cf_settings')||JSON.stringify({
+  return JSON.parse(localStorage.getItem('cf_s')||JSON.stringify({
     rep:{name:'David Martinez',phone:'954-464-3416',email:'Martinez7david@gmail.com',agent:'Allegiant Medical'},
     surgeons:[{name:'Dr. Siebuhr',hospital:'HCA Florida Ocala',city:'Ocala, FL'},{name:'Dr. McFadden',hospital:'HCA Florida Ocala',city:'Ocala, FL'}],
     selectedSurgeon:0
   }));
 }
-function saveSettings(s){localStorage.setItem('cf_settings',JSON.stringify(s));}
+function saveSettings(s){localStorage.setItem('cf_s',JSON.stringify(s));}
 
-// ── NAV ──
 function showPage(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
@@ -403,75 +413,103 @@ function showPage(p){
   window.scrollTo(0,0);
 }
 
-// ── LIVE SCANNER ──
+// ── SCANNER ──
 function toggleScanner(){scanning?stopScanner():startScanner();}
 
 function startScanner(){
   const btn=document.getElementById('scan-toggle');
-  btn.textContent='⏹ Stop Scanner';
-  btn.className='scan-btn stop';
-  setStatus('Initializing camera...','');
-  scanning=true;
+  btn.textContent='⏹ Stop Scanner';btn.className='scan-btn stop';
+  setStatus('Starting camera...','');scanning=true;
   scanner=new Html5Qrcode('reader',{verbose:false});
-  const cfg={
-    fps:12,
-    qrbox:{width:Math.min(window.innerWidth*0.78,300),height:90},
-    formatsToSupport:[Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.CODE_39],
-    rememberLastUsedCamera:true
-  };
-  scanner.start({facingMode:'environment'},cfg,onScanSuccess,()=>{})
-    .then(()=>setStatus('Point camera at a barcode',''))
-    .catch(err=>{
-      stopScanner();
-      setStatus('Camera error — use photo option below','');
-      console.error(err);
-    });
+  // use all formats for best compatibility — Code128 is the main one we need
+  scanner.start(
+    {facingMode:'environment'},
+    {fps:10,qrbox:{width:Math.min(window.innerWidth-60,280),height:80},aspectRatio:1.6},
+    onScanSuccess,
+    ()=>{}
+  ).then(()=>setStatus('Align barcode in the frame','')).catch(e=>{
+    stopScanner();
+    setStatus('Camera blocked — check Safari permissions','err');
+  });
 }
 
 function stopScanner(){
   scanning=false;
   const btn=document.getElementById('scan-toggle');
-  btn.textContent='▶ Start Scanner';
-  btn.className='scan-btn start';
+  btn.textContent='▶ Start Scanner';btn.className='scan-btn go';
   setStatus('Tap Start to activate camera','');
-  if(scanner){
-    scanner.stop().then(()=>{scanner.clear();scanner=null;}).catch(()=>{scanner=null;});
-  }
+  if(scanner){scanner.stop().then(()=>{scanner.clear();scanner=null;}).catch(()=>{scanner=null;});}
 }
 
 function setStatus(msg,cls){
-  const el=document.getElementById('scan-status');
-  el.textContent=msg;el.className='scan-status'+(cls?' '+cls:'');
+  const el=document.getElementById('scan-status');el.textContent=msg;el.className='scan-status'+(cls?' '+cls:'');
 }
 
-function onScanSuccess(decoded){
+function flashBox(success){
+  const box=document.getElementById('scanner-outer');
+  box.classList.add(success?'success':'error');
+  setTimeout(()=>box.classList.remove('success','error'),1200);
+}
+
+async function onScanSuccess(raw){
   const now=Date.now();
-  if(decoded===lastCode&&now-lastCodeTime<4000) return; // debounce duplicates
-  lastCode=decoded;lastCodeTime=now;
-  // vibrate on iPhone (if allowed)
-  if(navigator.vibrate) navigator.vibrate(80);
-  const item=parseGS1(decoded);
-  if(item){
-    addItem(item);
-    setStatus('✓ Scanned: '+item.name,'found');
-    showToast('✓ '+item.name);
-    setTimeout(()=>{ if(scanning) setStatus('Ready — scan next barcode',''); },3000);
-  } else {
-    setStatus('Barcode read — product not in price list','');
-    showToast('Unknown product — add manually');
+  // debounce: ignore same raw string within 3 seconds
+  if(raw===lastRaw&&now-lastRawTime<3000)return;
+  lastRaw=raw;lastRawTime=now;
+  if(navigator.vibrate)navigator.vibrate(60);
+
+  const item=parseGS1(raw);
+  if(!item){
+    flashBox(false);
+    setStatus('Barcode read — not in price list. Add manually.','err');
+    return;
   }
+
+  // check for duplicate (same REF + LOT)
+  const dupIdx=items.findIndex(it=>it.ref===item.ref&&it.lot===item.lot&&item.ref);
+  if(dupIdx>=0){
+    // pause debounce so modal can resolve
+    lastRaw='';
+    flashBox(false);
+    const action=await showDupModal(item);
+    if(action==='add'){
+      commitItem(item);
+    } else {
+      setStatus('Skipped duplicate — scan next','');
+    }
+  } else {
+    flashBox(true);
+    commitItem(item);
+  }
+}
+
+function commitItem(item){
+  items.push(item);renderItems();updateTotal();
+  setStatus('✓ '+item.name,'ok');
+  showToast('✓ '+item.name);
+  setTimeout(()=>{if(scanning)setStatus('Ready — scan next barcode','');},2500);
+}
+
+// ── DUPLICATE MODAL ──
+function showDupModal(item){
+  return new Promise(resolve=>{
+    dupResolve=resolve;
+    document.getElementById('dup-msg').textContent='"'+item.name+'" was already scanned. Add again or skip?';
+    document.getElementById('dup-modal').classList.add('show');
+  });
+}
+function dupAction(action){
+  document.getElementById('dup-modal').classList.remove('show');
+  if(dupResolve){dupResolve(action);dupResolve=null;}
 }
 
 // ── PHOTO FALLBACK ──
 function handlePhoto(input){
-  if(!input.files||!input.files[0]) return;
-  const file=input.files[0];
-  input.value='';
+  if(!input.files||!input.files[0])return;
+  const file=input.files[0];input.value='';
   showOverlay('Reading barcode...');
   const h=new Html5Qrcode('__tmp__',false);
-  h.scanFile(file,false)
-    .then(decoded=>{hideOverlay();onScanSuccess(decoded);})
-    .catch(()=>{hideOverlay();showToast('Could not read barcode — try again or add manually');});
+  h.scanFile(file,false).then(raw=>{hideOverlay();onScanSuccess(raw);}).catch(()=>{hideOverlay();showToast('Could not read — add manually');});
 }
 
 // ── GS1 PARSER ──
@@ -480,12 +518,11 @@ function parseGS1(raw){
   const m01=raw.match(/\(01\)(\d{14})/);
   const m10=raw.match(/\(10\)([^(\x1d]+)/);
   const m17=raw.match(/\(17\)(\d{6})/);
-  if(m01)gtin=m01[1];
-  if(m10)lot=m10[1].trim();
+  if(m01)gtin=m01[1];if(m10)lot=m10[1].trim();
   if(m17){const d=m17[1];exp='20'+d.slice(0,2)+'-'+d.slice(2,4)+'-'+d.slice(4,6);}
   if(!gtin&&raw.startsWith('01')&&raw.length>14){
     gtin=raw.slice(2,16);let rest=raw.slice(16);
-    if(rest.startsWith('10')){rest=rest.slice(2);const n=rest.search(/17|21/);lot=n>0?rest.slice(0,n):rest.replace(/\W/g,'');rest=n>0?rest.slice(n):'';}
+    if(rest.startsWith('10')){rest=rest.slice(2);const n=rest.search(/17\d|21\d/);lot=(n>0?rest.slice(0,n):rest).replace(/[^\w\-]/g,'');rest=n>0?rest.slice(n):'';}
     if(rest.startsWith('17')&&rest.length>=8){const d=rest.slice(2,8);exp='20'+d.slice(0,2)+'-'+d.slice(2,4)+'-'+d.slice(4,6);}
   }
   if(gtin&&GTIN_MAP[gtin])ref=GTIN_MAP[gtin];
@@ -496,17 +533,22 @@ function parseGS1(raw){
 }
 
 // ── MANUAL ──
+function toggleManual(btn){
+  const body=document.getElementById('manual-body');
+  const open=body.style.display==='block';
+  body.style.display=open?'none':'block';
+  btn.textContent=open?'+ Add Manually':'▲ Hide Manual Entry';
+}
 function autofillRef(){
   const ref=document.getElementById('manual-ref').value.trim().toUpperCase();
-  const info=PRICE_LIST[ref];
-  if(info)document.getElementById('manual-desc').value=info.name;
+  const info=PRICE_LIST[ref];if(info)document.getElementById('manual-desc').value=info.name;
 }
 function addManualItem(){
   const ref=document.getElementById('manual-ref').value.trim();
   const desc=document.getElementById('manual-desc').value.trim();
-  if(!desc&&!ref){showToast('Enter a product name or REF#');return;}
+  if(!desc&&!ref){showToast('Enter a name or REF#');return;}
   const info=PRICE_LIST[ref.toUpperCase()]||null;
-  addItem({name:info?info.name:desc,ref,lot:document.getElementById('manual-lot').value.trim(),
+  commitItem({name:info?info.name:desc,ref,lot:document.getElementById('manual-lot').value.trim(),
     exp:document.getElementById('manual-exp').value.trim(),
     qty:parseInt(document.getElementById('manual-qty').value)||1,
     price:info?info.price:0,disposition:document.getElementById('manual-disp').value});
@@ -515,22 +557,21 @@ function addManualItem(){
 }
 
 // ── ITEMS ──
-function addItem(item){items.push(item);renderItems();updateTotal();}
 function removeItem(i){items.splice(i,1);renderItems();updateTotal();}
-function clearItems(){if(items.length&&confirm('Clear all items?')){items=[];renderItems();updateTotal();}}
+function clearItems(){if(!items.length)return;if(confirm('Clear all items?')){items=[];renderItems();updateTotal();}}
 function renderItems(){
   const el=document.getElementById('items-list');
   document.getElementById('item-count').textContent=items.length;
-  if(!items.length){el.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:12px 0">No items yet — scan barcodes or add manually</div>';return;}
+  if(!items.length){el.innerHTML='<div class="empty-msg">No items yet — scan barcodes or add manually</div>';return;}
   el.innerHTML=items.map((it,i)=>`
-    <div class="item-card">
+    <div class="item-card${i===items.length-1?' new':''}" >
       <button class="del-btn" onclick="removeItem(${i})">×</button>
       <div class="item-name">${it.name}</div>
       <div class="item-meta">${[it.ref&&'REF: '+it.ref,it.lot&&'LOT: '+it.lot,it.exp&&'Exp: '+it.exp].filter(Boolean).join('  ·  ')}</div>
       <div class="item-controls">
         <label style="font-size:11px;color:var(--muted);flex-shrink:0">QTY</label>
-        <input class="qty-input" type="number" inputmode="numeric" min="1" value="${it.qty}" onchange="items[${i}].qty=parseInt(this.value)||1;updateTotal()">
-        <select class="disp-select" onchange="items[${i}].disposition=this.value">
+        <input class="qty-inp" type="number" inputmode="numeric" min="1" value="${it.qty}" onchange="items[${i}].qty=parseInt(this.value)||1;updateTotal()">
+        <select class="disp-sel" onchange="items[${i}].disposition=this.value">
           <option value="implanted" ${it.disposition==='implanted'?'selected':''}>Implanted</option>
           <option value="opened_unused" ${it.disposition==='opened_unused'?'selected':''}>Opened &amp; Unused</option>
           <option value="implanted_removed" ${it.disposition==='implanted_removed'?'selected':''}>Impl. &amp; Removed</option>
@@ -540,13 +581,16 @@ function renderItems(){
       </div>
     </div>
   `).join('');
+  // scroll list to bottom to show newest item
+  const scroll=document.getElementById('items-list');
+  scroll.scrollTop=scroll.scrollHeight;
 }
 function updateTotal(){
   const t=items.reduce((s,it)=>s+it.price*it.qty,0);
   document.getElementById('f-total').textContent='$'+t.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
-// ── SURGEON BUTTONS ──
+// ── SURGEONS ──
 function renderSurgeonBtns(){
   const s=loadSettings();selectedSurgeon=s.selectedSurgeon||0;
   const row=document.getElementById('surg-row');
@@ -558,12 +602,12 @@ function selectSurgeon(i){selectedSurgeon=i;document.querySelectorAll('.surg-btn
 // ── SETTINGS ──
 function renderSettings(){
   const s=loadSettings();
-  document.getElementById('s-rep-name').value=s.rep.name||'David Martinez';
-  document.getElementById('s-rep-phone').value=s.rep.phone||'954-464-3416';
-  document.getElementById('s-rep-email').value=s.rep.email||'Martinez7david@gmail.com';
-  document.getElementById('s-agent').value=s.rep.agent||'Allegiant Medical';
+  document.getElementById('s-rep-name').value=s.rep.name||'';
+  document.getElementById('s-rep-phone').value=s.rep.phone||'';
+  document.getElementById('s-rep-email').value=s.rep.email||'';
+  document.getElementById('s-agent').value=s.rep.agent||'';
   const list=document.getElementById('surgeon-list');
-  if(!s.surgeons.length){list.innerHTML='<div style="color:var(--muted);font-size:13px">No surgeons yet.</div>';return;}
+  if(!s.surgeons.length){list.innerHTML='<div style="color:var(--muted);font-size:13px;padding:4px 0">No surgeons yet.</div>';return;}
   list.innerHTML=s.surgeons.map((sg,i)=>`<div class="profile-card"><div><div class="pname">${sg.name}</div><div class="phospital">${sg.hospital} · ${sg.city}</div></div><div class="profile-actions"><button class="edit-btn" onclick="editSurgeon(${i})">Edit</button><button class="del-btn2" onclick="deleteSurgeon(${i})">Del</button></div></div>`).join('');
 }
 function saveRepInfo(){const s=loadSettings();s.rep={name:document.getElementById('s-rep-name').value,phone:document.getElementById('s-rep-phone').value,email:document.getElementById('s-rep-email').value,agent:document.getElementById('s-agent').value};saveSettings(s);showToast('Saved!');}
@@ -584,7 +628,7 @@ async function generatePDF(){
     const pdfBytes=Uint8Array.from(atob(PDF_B64),c=>c.charCodeAt(0));
     const pdfDoc=await PDFLib.PDFDocument.load(pdfBytes,{ignoreEncryption:true});
     const form=pdfDoc.getForm();
-    function setTxt(name,val,sz){try{const f=form.getTextField(name);f.setText(val||'');if(sz)f.setFontSize(sz);}catch(e){console.warn(name,e.message);}}
+    function setTxt(n,v,sz){try{const f=form.getTextField(n);f.setText(v||'');if(sz)f.setFontSize(sz);}catch(e){}}
     setTxt('Surgeon Name',surgeon.name);setTxt('Agent Name',rep.agent||'');setTxt('Hosp Name',surgeon.hospital);setTxt('City, State',surgeon.city);
     setTxt('Rep Name, Number, Email',(rep.name||'')+' | '+(rep.phone||'')+' | '+(rep.email||''));
     setTxt('Date of Surgery',dateStr);setTxt('Hosp. PO',document.getElementById('f-po').value);
@@ -593,8 +637,7 @@ async function generatePDF(){
     items.slice(0,6).forEach((it,i)=>{
       const r=i+1;
       setTxt(`Affix Implant Sticker BelowRow${r}`,`${it.name}  REF: ${it.ref}  LOT: ${it.lot}  Exp: ${it.exp}`,7);
-      setTxt(`Quantity Line ${r}`,it.qty?String(it.qty):'');
-      setTxt(`Price Line ${r}`,it.price?it.price.toFixed(2):'');
+      setTxt(`Quantity Line ${r}`,it.qty?String(it.qty):'');setTxt(`Price Line ${r}`,it.price?it.price.toFixed(2):'');
       const tot=it.price*it.qty;setTxt(`Total Line ${r}`,tot?tot.toFixed(2):'');
       if(it.disposition==='implanted')setTxt(`Implanted Line ${r}`,'X');
       else if(it.disposition==='opened_unused')setTxt(`Opened & Unused Line ${r}`,'X');
