@@ -662,7 +662,12 @@ async function generatePDF(){
     s2('Notes',document.getElementById('f-notes').value);s2('OR Signature',document.getElementById('f-sig').value);
     items.slice(0,6).forEach((it,i)=>{
       const r=i+1;
-      s2(`Affix Implant Sticker BelowRow${r}`,`${it.name}  REF: ${it.ref}  LOT: ${it.lot}  Exp: ${it.exp}`,7);
+      try{
+        const f=form.getTextField(`Affix Implant Sticker BelowRow${r}`);
+        f.enableMultiline();
+        f.setFontSize(7);
+        f.setText(`${it.name}\nREF: ${it.ref}   LOT: ${it.lot}   Exp: ${it.exp}`);
+      }catch(e){};
       s2(`Quantity Line ${r}`,it.qty?String(it.qty):'');s2(`Price Line ${r}`,it.price?it.price.toFixed(2):'');
       const tot=it.price*it.qty;s2(`Total Line ${r}`,tot?tot.toFixed(2):'');
       if(it.disposition==='implanted')s2(`Implanted Line ${r}`,'X');
