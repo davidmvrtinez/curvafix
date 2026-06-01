@@ -473,26 +473,55 @@ function commitItem(item){
 }
 
 // ── GS1 PARSER ──
+// Handles any AI order, both parenthesised and raw formats
 function parseGS1(raw){
   let ref='',lot='',exp='',gtin='';
+
+  // 1. Parenthesised format: (01)...(17)...(10)... — try regex for each AI independently
   const m01=raw.match(/\(01\)(\d{14})/);
-  const m10=raw.match(/\(10\)([^(\x1d]+)/);
+  const m10=raw.match(/\(10\)([^(\x1d\r\n]+)/);
   const m17=raw.match(/\(17\)(\d{6})/);
-  if(m01)gtin=m01[1]; if(m10)lot=m10[1].trim();
+  if(m01) gtin=m01[1];
+  if(m10) lot=m10[1].trim();
   if(m17){const d=m17[1];exp='20'+d.slice(0,2)+'-'+d.slice(2,4)+'-'+d.slice(4,6);}
-  if(!gtin&&/^\d/.test(raw)&&raw.length>14){
-    if(raw.startsWith('01')){
-      gtin=raw.slice(2,16); let rest=raw.slice(16);
-      if(rest.startsWith('10')){rest=rest.slice(2);const n=rest.search(/17\d|21\d/);lot=(n>0?rest.slice(0,n):rest).replace(/[^\w\-]/g,'');rest=n>0?rest.slice(n):'';}
-      if(rest.startsWith('17')&&rest.length>=8){const d=rest.slice(2,8);exp='20'+d.slice(0,2)+'-'+d.slice(2,4)+'-'+d.slice(4,6);}
+
+  // 2. Raw GS1 format (no parens) — walk through AIs in whatever order they appear
+  if(!gtin){
+    let s=raw;
+    if(s.startsWith(']C1')||s.startsWith(']c1')) s=s.slice(3); // strip symbology id
+    if(/^\d{2}/.test(s)){
+      let pos=0;
+      while(pos<s.length){
+        if(s[pos]==='\x1d'){pos++;continue;} // FNC1 separator
+        const ai2=s.slice(pos,pos+2);
+        if(ai2==='01'&&s.length-pos>=16){gtin=s.slice(pos+2,pos+16);pos+=16;}
+        else if(ai2==='17'&&s.length-pos>=8){
+          const d=s.slice(pos+2,pos+8);
+          exp='20'+d.slice(0,2)+'-'+d.slice(2,4)+'-'+d.slice(4,6);
+          pos+=8;
+        }
+        else if(ai2==='10'){
+          pos+=2;
+          const end=s.indexOf('\x1d',pos);
+          lot=(end>=0?s.slice(pos,end):s.slice(pos)).replace(/[^\w\-]/g,'');
+          pos=end>=0?end+1:s.length;
+        }
+        else if(ai2==='21'){
+          pos+=2;
+          const end=s.indexOf('\x1d',pos);
+          pos=end>=0?end+1:s.length;
+        }
+        else{pos++;} // unknown byte, skip
+      }
     }
   }
-  if(gtin&&GTIN_MAP[gtin])ref=GTIN_MAP[gtin];
+
+  if(gtin&&GTIN_MAP[gtin]) ref=GTIN_MAP[gtin];
   if(!ref){for(const r of Object.keys(PRICE_LIST)){if(raw.includes(r)){ref=r;break;}}}
-  if(!ref&&!lot&&!gtin)return null;
+  if(!ref&&!lot&&!gtin) return null;
   const info=ref?PRICE_LIST[ref]:null;
-  return{name:info?info.name:(ref||'Unknown Product'),ref:ref||'',lot:lot||'',exp:exp||'',qty:1,price:info?info.price:0,
-    disposition:ref&&ref.startsWith('CRS')?'implanted':'blank'};
+  return{name:info?info.name:(ref||'Unknown Product'),ref:ref||'',lot:lot||'',exp:exp||'',qty:1,
+    price:info?info.price:0,disposition:ref&&ref.startsWith('CRS')?'implanted':'blank'};
 }
 
 // ── PHOTO FALLBACK ──
