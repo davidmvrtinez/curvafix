@@ -146,6 +146,7 @@ textarea{resize:vertical;min-height:56px}
         </div></div>
       </div>
       <div class="scan-hint">Hold 5–8 inches away · keep barcode inside the lines</div>
+      <div id="debug-raw" style="display:none;margin-top:6px;background:#1a1a2e;color:#5bc8f5;border-radius:8px;padding:8px 10px;font-size:10px;font-family:monospace;word-break:break-all;line-height:1.5"></div>
       <div class="status-bar" id="status-bar"><div class="status-dot"></div><span id="status-msg">Tap Start to activate camera</span></div>
       <button class="scan-btn go" id="scan-toggle" onclick="toggleScanner()">▶ Start Scanner</button>
       <div class="photo-link">
@@ -438,6 +439,11 @@ async function onCode(raw){
   const now=Date.now();
   if(raw===lastCode&&now-lastCodeTime<3500) return;
   lastCode=raw; lastCodeTime=now;
+  // debug: show raw decoded string on screen
+  const dbg=document.getElementById('debug-raw');
+  const escaped=raw.replace(/[\x00-\x1f\x7f]/g,c=>'['+c.charCodeAt(0)+']');
+  dbg.style.display='block';
+  dbg.innerHTML='<strong>Raw barcode:</strong> '+escaped+'<br><strong>Parsed:</strong> '+JSON.stringify(parseGS1(raw));
   if(navigator.vibrate) navigator.vibrate(60);
   const item=parseGS1(raw);
   if(!item){
