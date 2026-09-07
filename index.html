@@ -301,32 +301,43 @@ textarea{resize:vertical;min-height:56px}
   <button class="modal-btn ghost" onclick="dupAction('cancel')">Cancel</button>
 </div></div>
 
+<div class="modal" id="unk-modal"><div class="modal-box">
+  <div class="modal-title">Unknown Item</div>
+  <div class="modal-sub" id="unk-msg">This barcode was not found in the price list.</div>
+  <div id="unk-detail" style="font-size:12px;color:#555;margin-bottom:12px;word-break:break-all;"></div>
+  <button class="modal-btn primary" onclick="unkAction('add')">Add with $0 price</button>
+  <button class="modal-btn ghost" onclick="unkAction('skip')">Skip</button>
+</div></div>
+
 <div class="overlay" id="overlay"><div class="overlay-box"><div class="spinner"></div><p id="overlay-msg">Processing...</p></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 const PRICE_LIST={
-  'CRS-075-090-LP':{name:'CurvaFix LP Implant 7.5x90mm',price:3950},'CRS-075-100-LP':{name:'CurvaFix LP Implant 7.5x100mm',price:3950},
-  'CRS-075-110-LP':{name:'CurvaFix LP Implant 7.5x110mm',price:3950},'CRS-075-120-LP':{name:'CurvaFix LP Implant 7.5x120mm',price:3950},
-  'CRS-075-130-LP':{name:'CurvaFix LP Implant 7.5x130mm',price:3950},'CRS-075-140-LP':{name:'CurvaFix LP Implant 7.5x140mm',price:3950},
-  'CRS-075-150-LP':{name:'CurvaFix LP Implant 7.5x150mm',price:3950},'CRS-075-160-LP':{name:'CurvaFix LP Implant 7.5x160mm',price:3950},
-  'CRS-075-170-LP':{name:'CurvaFix LP Implant 7.5x170mm',price:3950},'CRS-075-180-LP':{name:'CurvaFix LP Implant 7.5x180mm',price:3950},
-  'CRS-075-190-LP':{name:'CurvaFix LP Implant 7.5x190mm',price:3950},'CRS-075-200-LP':{name:'CurvaFix LP Implant 7.5x200mm',price:3950},
-  'CRS-075-210-LP':{name:'CurvaFix LP Implant 7.5x210mm',price:3950},
-  'CRS-095-090-LP':{name:'CurvaFix LP Implant 9.5x90mm',price:3950},'CRS-095-100-LP':{name:'CurvaFix LP Implant 9.5x100mm',price:3950},
-  'CRS-095-110-LP':{name:'CurvaFix LP Implant 9.5x110mm',price:3950},'CRS-095-120-LP':{name:'CurvaFix LP Implant 9.5x120mm',price:3950},
-  'CRS-095-130-LP':{name:'CurvaFix LP Implant 9.5x130mm',price:3950},'CRS-095-140-LP':{name:'CurvaFix LP Implant 9.5x140mm',price:3950},
-  'CRS-095-150-LP':{name:'CurvaFix LP Implant 9.5x150mm',price:3950},'CRS-095-160-LP':{name:'CurvaFix LP Implant 9.5x160mm',price:3950},
-  'CRS-095-170-LP':{name:'CurvaFix LP Implant 9.5x170mm',price:3950},'CRS-095-180-LP':{name:'CurvaFix LP Implant 9.5x180mm',price:3950},
-  'CRS-095-190-LP':{name:'CurvaFix LP Implant 9.5x190mm',price:3950},'CRS-095-200-LP':{name:'CurvaFix LP Implant 9.5x200mm',price:3950},
-  'CRS-095-210-LP':{name:'CurvaFix LP Implant 9.5x210mm',price:3950},
-  'CGK-001':{name:'CurvaFix Guidewire Kit',price:500},'CGK-001-LP':{name:'CurvaFix LP Guidewire Kit',price:500},'DWK-001':{name:'CurvaFix Drill Wire Kit',price:500},
+  // CurvaFix LP Implants 7.5mm — HCA Ocala price effective 01-01-2026
+  'CRS-075-090-LP':{name:'CurvaFix LP Implant 7.5x90mm',price:3160},'CRS-075-100-LP':{name:'CurvaFix LP Implant 7.5x100mm',price:3160},
+  'CRS-075-110-LP':{name:'CurvaFix LP Implant 7.5x110mm',price:3160},'CRS-075-120-LP':{name:'CurvaFix LP Implant 7.5x120mm',price:3160},
+  'CRS-075-130-LP':{name:'CurvaFix LP Implant 7.5x130mm',price:3160},'CRS-075-140-LP':{name:'CurvaFix LP Implant 7.5x140mm',price:3160},
+  'CRS-075-150-LP':{name:'CurvaFix LP Implant 7.5x150mm',price:3160},'CRS-075-160-LP':{name:'CurvaFix LP Implant 7.5x160mm',price:3160},
+  'CRS-075-170-LP':{name:'CurvaFix LP Implant 7.5x170mm',price:3160},'CRS-075-180-LP':{name:'CurvaFix LP Implant 7.5x180mm',price:3160},
+  'CRS-075-190-LP':{name:'CurvaFix LP Implant 7.5x190mm',price:3160},'CRS-075-200-LP':{name:'CurvaFix LP Implant 7.5x200mm',price:3160},
+  'CRS-075-210-LP':{name:'CurvaFix LP Implant 7.5x210mm',price:3160},
+  // CurvaFix LP Implants 9.5mm
+  'CRS-095-090-LP':{name:'CurvaFix LP Implant 9.5x90mm',price:3160},'CRS-095-100-LP':{name:'CurvaFix LP Implant 9.5x100mm',price:3160},
+  'CRS-095-110-LP':{name:'CurvaFix LP Implant 9.5x110mm',price:3160},'CRS-095-120-LP':{name:'CurvaFix LP Implant 9.5x120mm',price:3160},
+  'CRS-095-130-LP':{name:'CurvaFix LP Implant 9.5x130mm',price:3160},'CRS-095-140-LP':{name:'CurvaFix LP Implant 9.5x140mm',price:3160},
+  'CRS-095-150-LP':{name:'CurvaFix LP Implant 9.5x150mm',price:3160},'CRS-095-160-LP':{name:'CurvaFix LP Implant 9.5x160mm',price:3160},
+  'CRS-095-170-LP':{name:'CurvaFix LP Implant 9.5x170mm',price:3160},'CRS-095-180-LP':{name:'CurvaFix LP Implant 9.5x180mm',price:3160},
+  'CRS-095-190-LP':{name:'CurvaFix LP Implant 9.5x190mm',price:3160},'CRS-095-200-LP':{name:'CurvaFix LP Implant 9.5x200mm',price:3160},
+  'CRS-095-210-LP':{name:'CurvaFix LP Implant 9.5x210mm',price:3160},
+  // Disposable instruments
+  'CGK-001-LP':{name:'CurvaFix LP Guidewire Kit',price:500},'DWK-001':{name:'CurvaFix Drill Wire Kit',price:500},
   'CFR-060-LP':{name:'CurvaFix 6.0mm Flex Drill',price:500},'CFR-065-LP':{name:'CurvaFix 6.5mm Flex Drill',price:500},
   'CFR-070-LP':{name:'CurvaFix 7.0mm Flex Drill',price:500},'CFR-075-LP':{name:'CurvaFix 7.5mm Flex Drill',price:500},
   'CFR-080-LP':{name:'CurvaFix 8.0mm Flex Drill',price:500},'CFR-085-LP':{name:'CurvaFix 8.5mm Flex Drill',price:500},
-  'CGP-001-SP':{name:'CurvaFix Short 2.8mm Guide Pin',price:150},'GPS-001-SP':{name:'CurvaFix Long Smooth 2.8mm Guide Pin',price:150},
+  'CGP-001-SP':{name:'CurvaFix Short 2.8mm Guide Pin',price:150},
+  'GPS-001-SP':{name:'CurvaFix Long Smooth 2.8mm Guide Pin',price:150},
   'GPT-001-SP':{name:'CurvaFix Long Threaded 2.8mm Guide Pin',price:150},
-  'CGP-001':{name:'CurvaFix Guide Pin 2.8mm',price:125},'GPS-001':{name:'CurvaFix Start Pin Smooth',price:125},'GPT-001':{name:'CurvaFix Start Pin Threaded',price:125},
 };
 const GTIN_MAP={
   '10850070500255':'CRS-075-090-LP','10850070500262':'CRS-075-100-LP','10850070500279':'CRS-075-110-LP','10850070500286':'CRS-075-120-LP',
@@ -448,8 +459,17 @@ async function onCode(raw){
   const item=parseGS1(raw);
   if(!item){
     flashWrap(false);
-    setStatus('Barcode read — not in price list. Add manually.','err');
+    setStatus('Barcode read — not recognized. Add manually.','err');
     setTimeout(()=>{ if(scanning) setStatus('Ready — scan next barcode','active'); },2500);
+    return;
+  }
+  // Unknown item — GTIN/lot found but not in price list
+  if(!item.ref || item.price===0){
+    lastCode='';
+    flashWrap(false);
+    const action=await showUnkModal(item, raw);
+    if(action==='add') commitItem(item);
+    else setStatus('Skipped — scan next barcode','active');
     return;
   }
   const dupIdx=items.findIndex(it=>it.ref===item.ref&&it.lot===item.lot&&item.ref);
@@ -549,6 +569,21 @@ function showDupModal(item){
   });
 }
 function dupAction(a){document.getElementById('dup-modal').classList.remove('show');if(dupResolve){dupResolve(a);dupResolve=null;}}
+
+let unkResolve=null;
+function showUnkModal(item,raw){
+  return new Promise(resolve=>{
+    unkResolve=resolve;
+    const gtin=raw.match(/\d{14}/)?.[0]||'';
+    const lot=item.lot||'';
+    const exp=item.exp||'';
+    document.getElementById('unk-msg').textContent='This barcode was not found in the price list.';
+    document.getElementById('unk-detail').textContent=
+      (gtin?'GTIN: '+gtin+'\n':'')+(lot?'LOT: '+lot+'  ':'')+( exp?'Exp: '+exp:'');
+    document.getElementById('unk-modal').classList.add('show');
+  });
+}
+function unkAction(a){document.getElementById('unk-modal').classList.remove('show');if(unkResolve){unkResolve(a);unkResolve=null;}}
 
 // ── MANUAL ──
 function toggleManual(btn){const b=document.getElementById('manual-body');const o=b.style.display==='block';b.style.display=o?'none':'block';btn.textContent=o?'+ Add Manually':'▲ Hide Manual Entry';}
