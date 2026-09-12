@@ -253,6 +253,22 @@ textarea{resize:vertical;min-height:56px}
     </div>
     <input type="text" id="c-fix-other-txt" placeholder="Specify..." style="margin-top:10px;font-size:14px">
   </div></div>
+  <div class="card"><div class="card-hdr">Shipping Location for Restocks</div><div class="card-body">
+    <div class="surg-row" id="ship-row"></div>
+    <button class="manual-toggle" style="margin-top:10px" onclick="toggleShipInline()">+ Add New Shipping Location</button>
+    <div class="manual-body" id="ship-inline-form">
+      <div style="margin:12px 0 8px"><label class="lbl">Location Name</label><input type="text" id="ship-label" placeholder="e.g. HCA Ocala OR Storage"></div>
+      <div style="margin-bottom:8px"><label class="lbl">Street Address</label><input type="text" id="ship-street" placeholder="123 Main St"></div>
+      <div style="margin-bottom:8px"><label class="lbl">Unit / Suite / Dept</label><input type="text" id="ship-unit" placeholder="Optional"></div>
+      <div class="row2" style="margin-bottom:8px">
+        <div><label class="lbl">City</label><input type="text" id="ship-city"></div>
+        <div><label class="lbl">State</label><input type="text" id="ship-state" placeholder="FL"></div>
+      </div>
+      <div style="margin-bottom:10px"><label class="lbl">ZIP Code</label><input type="text" id="ship-zip" inputmode="numeric"></div>
+      <input type="hidden" id="ship-edit-idx">
+      <button class="add-btn" onclick="saveShippingInline()">Save Location</button>
+    </div>
+  </div></div>
   <div class="total-bar"><span class="tl">Total Invoice</span><span class="tv" id="f-total">$0.00</span></div>
   <div class="pdf-hint"><strong>📄 How it works on iPhone</strong>Tap Generate PDF → Safari opens the PDF → tap <strong>Share ↑ → Save to Files</strong> → tap <strong>Email CurvaFix</strong> below to open a pre-filled message, attach the saved PDF, then send → tap <strong>Back</strong> to return to the app. Your case auto-saves before navigating.</div>
   <button class="gen-btn" onclick="saveCase()" style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f);margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save Case</button>
@@ -281,6 +297,26 @@ textarea{resize:vertical;min-height:56px}
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="save-btn" onclick="saveHospital()">Save</button>
         <button class="save-btn" style="background:#6b7c93" onclick="hideHospitalForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><span>Shipping Locations</span>
+      <span style="font-size:11px;cursor:pointer;color:var(--blue2);font-weight:700" onclick="showAddShipping()">+ Add</span></div>
+    <div class="card-body" id="shipping-list"></div>
+    <div class="card-body" id="shipping-form" style="display:none;border-top:1px solid var(--border)">
+      <div style="margin-bottom:10px"><label class="lbl">Location Name</label><input type="text" id="sh-label" placeholder="e.g. HCA Ocala OR Storage"></div>
+      <div style="margin-bottom:10px"><label class="lbl">Street Address</label><input type="text" id="sh-street" placeholder="123 Main St"></div>
+      <div style="margin-bottom:10px"><label class="lbl">Unit / Suite / Dept</label><input type="text" id="sh-unit" placeholder="Optional"></div>
+      <div class="row2" style="margin-bottom:10px">
+        <div><label class="lbl">City</label><input type="text" id="sh-city"></div>
+        <div><label class="lbl">State</label><input type="text" id="sh-state" placeholder="FL"></div>
+      </div>
+      <div style="margin-bottom:4px"><label class="lbl">ZIP Code</label><input type="text" id="sh-zip" inputmode="numeric"></div>
+      <input type="hidden" id="sh-edit-idx">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="save-btn" onclick="saveShippingLocation()">Save</button>
+        <button class="save-btn" style="background:#6b7c93" onclick="hideShippingForm()">Cancel</button>
       </div>
     </div>
   </div>
@@ -405,7 +441,15 @@ function loadSettings(){
   if(!s.hospitals) s.hospitals=[];
   if(s.selectedHospital==null) s.selectedHospital=0;
   if(s.selectedSurgeon==null) s.selectedSurgeon=0;
+  if(!s.shippingLocations) s.shippingLocations=[];
+  if(s.selectedShipping==null) s.selectedShipping=0;
   return s;
+}
+function formatShipAddress(loc){
+  if(!loc) return '';
+  const line1=[loc.street,loc.unit].filter(Boolean).join(', ');
+  const line2=[loc.city,loc.state].filter(Boolean).join(', ')+(loc.zip?(' '+loc.zip):'');
+  return [line1,line2].filter(Boolean).join('\n');
 }
 function saveSettings(s){localStorage.setItem('cf_s',JSON.stringify(s));}
 
@@ -581,7 +625,7 @@ function showPage(p){
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   document.getElementById('nav-'+p).classList.add('active');
-  if(p==='form'){renderHospitalBtns();updateTotal();}
+  if(p==='form'){renderHospitalBtns();renderShippingBtns();updateTotal();}
   if(p==='settings') renderSettings();
   if(p==='scan') renderActiveHospitalIndicator();
   if(p!=='scan') stopScanner();
@@ -881,7 +925,7 @@ function renderSettings(){
   document.getElementById('s-rep-name').value=s.rep.name||'';document.getElementById('s-rep-phone').value=s.rep.phone||'';
   document.getElementById('s-rep-email').value=s.rep.email||'';document.getElementById('s-agent').value=s.rep.agent||'';
   const list=document.getElementById('hospital-list');
-  if(!s.hospitals.length){list.innerHTML='<div style="color:var(--muted);font-size:13px;padding:4px 0">No hospitals yet.</div>';return;}
+  if(!s.hospitals.length){list.innerHTML='<div style="color:var(--muted);font-size:13px;padding:4px 0">No hospitals yet.</div>';renderShippingListSettings();return;}
   list.innerHTML=s.hospitals.map((h,i)=>`
     <div class="profile-card" style="flex-direction:column;align-items:stretch">
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -906,8 +950,96 @@ function renderSettings(){
         <div id="price-view-${i}" style="display:none;margin-top:8px;max-height:260px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px"></div>
       </div>
     </div>`).join('');
+  renderShippingListSettings();
 }
 function saveRepInfo(){const s=loadSettings();s.rep={name:document.getElementById('s-rep-name').value,phone:document.getElementById('s-rep-phone').value,email:document.getElementById('s-rep-email').value,agent:document.getElementById('s-agent').value};saveSettings(s);showToast('Saved!');}
+
+// ── SHIPPING LOCATIONS ──
+function renderShippingListSettings(){
+  const s=loadSettings();
+  const list=document.getElementById('shipping-list');
+  if(!list) return;
+  if(!s.shippingLocations.length){list.innerHTML='<div style="color:var(--muted);font-size:13px;padding:4px 0">No shipping locations yet.</div>';return;}
+  list.innerHTML=s.shippingLocations.map((loc,i)=>`<div class="profile-card"><div><div class="pname">${loc.label||'(unnamed)'}</div><div class="phospital">${formatShipAddress(loc).replace('\n',', ')}</div></div><div class="profile-actions"><button class="edit-btn" onclick="editShippingLocation(${i})">Edit</button><button class="del-btn2" onclick="deleteShippingLocation(${i})">Del</button></div></div>`).join('');
+}
+function showAddShipping(){['sh-label','sh-street','sh-unit','sh-city','sh-state','sh-zip'].forEach(id=>document.getElementById(id).value='');document.getElementById('sh-edit-idx').value='';document.getElementById('shipping-form').style.display='block';}
+function hideShippingForm(){document.getElementById('shipping-form').style.display='none';}
+function editShippingLocation(i){
+  const loc=loadSettings().shippingLocations[i];
+  document.getElementById('sh-label').value=loc.label||'';
+  document.getElementById('sh-street').value=loc.street||'';
+  document.getElementById('sh-unit').value=loc.unit||'';
+  document.getElementById('sh-city').value=loc.city||'';
+  document.getElementById('sh-state').value=loc.state||'';
+  document.getElementById('sh-zip').value=loc.zip||'';
+  document.getElementById('sh-edit-idx').value=i;
+  document.getElementById('shipping-form').style.display='block';
+}
+function saveShippingLocation(){
+  const loc={
+    label:document.getElementById('sh-label').value.trim(),
+    street:document.getElementById('sh-street').value.trim(),
+    unit:document.getElementById('sh-unit').value.trim(),
+    city:document.getElementById('sh-city').value.trim(),
+    state:document.getElementById('sh-state').value.trim(),
+    zip:document.getElementById('sh-zip').value.trim(),
+  };
+  if(!loc.street&&!loc.label){showToast('Enter a location name or address');return;}
+  const s=loadSettings();
+  const idx=document.getElementById('sh-edit-idx').value;
+  if(idx!=='') s.shippingLocations[parseInt(idx)]=loc; else s.shippingLocations.push(loc);
+  saveSettings(s);
+  hideShippingForm();renderSettings();
+  showToast('Shipping location saved!');
+}
+function deleteShippingLocation(i){
+  if(!confirm('Delete this shipping location?'))return;
+  const s=loadSettings();
+  s.shippingLocations.splice(i,1);
+  if(s.selectedShipping>=s.shippingLocations.length) s.selectedShipping=0;
+  saveSettings(s);renderSettings();
+}
+
+// form-page selector + quick add
+function renderShippingBtns(){
+  const s=loadSettings();
+  const list=s.shippingLocations;
+  let sel=s.selectedShipping||0;
+  const row=document.getElementById('ship-row');
+  if(!row) return;
+  if(!list.length){row.innerHTML='<div style="color:var(--muted);font-size:13px">No shipping locations yet — add one below.</div>';return;}
+  if(sel>=list.length) sel=0;
+  row.innerHTML=list.map((loc,i)=>`<button class="surg-btn ${i===sel?'active':''}" onclick="selectShipping(${i})"><div class="sn">${loc.label||loc.street||'(unnamed)'}</div><div class="sh">${[loc.city,loc.state].filter(Boolean).join(', ')}</div></button>`).join('');
+}
+function selectShipping(i){
+  const s=loadSettings();s.selectedShipping=i;saveSettings(s);
+  document.querySelectorAll('#ship-row .surg-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+}
+function toggleShipInline(){
+  const el=document.getElementById('ship-inline-form');
+  const showing=el.style.display==='block';
+  el.style.display=showing?'none':'block';
+  if(!showing){['ship-label','ship-street','ship-unit','ship-city','ship-state','ship-zip'].forEach(id=>document.getElementById(id).value='');document.getElementById('ship-edit-idx').value='';}
+}
+function saveShippingInline(){
+  const loc={
+    label:document.getElementById('ship-label').value.trim(),
+    street:document.getElementById('ship-street').value.trim(),
+    unit:document.getElementById('ship-unit').value.trim(),
+    city:document.getElementById('ship-city').value.trim(),
+    state:document.getElementById('ship-state').value.trim(),
+    zip:document.getElementById('ship-zip').value.trim(),
+  };
+  if(!loc.street&&!loc.label){showToast('Enter a location name or address');return;}
+  const s=loadSettings();
+  const idx=document.getElementById('ship-edit-idx').value;
+  if(idx!=='') s.shippingLocations[parseInt(idx)]=loc;
+  else{ s.shippingLocations.push(loc); s.selectedShipping=s.shippingLocations.length-1; }
+  saveSettings(s);
+  document.getElementById('ship-inline-form').style.display='none';
+  renderShippingBtns();
+  showToast('Shipping location saved!');
+}
 
 function showAddHospital(){document.getElementById('h-name').value='';document.getElementById('h-city').value='';document.getElementById('h-edit-idx').value='';document.getElementById('hospital-form').style.display='block';}
 function hideHospitalForm(){document.getElementById('hospital-form').style.display='none';}
@@ -1111,18 +1243,26 @@ function emailCurvaFix(){
   const subjectParts=['DGF Form',surgeonName,hosp.name,dateStr].filter(Boolean);
   const subject=subjectParts.join(' - ')||'DGF Form';
 
+  const shipLoc=(s.shippingLocations||[])[s.selectedShipping||0]||null;
+
   const bodyLines=[
     'Hi CurvaFix team,','',
     'Attached is the completed U.S. Delivered Goods Form for the case below.','',
     'Surgeon: '+(surgeonName||'—'),
     'Hospital: '+(hosp.name||'—')+(hosp.city?(', '+hosp.city):''),
     'Date of Surgery: '+(dateStr||'—'),
-    'Total Invoice: '+totalStr,'',
-    'Thanks,',
-    rep.name||'',
-    [rep.phone,rep.email].filter(Boolean).join(' | '),
-    rep.agent||'',
+    'Total Invoice: '+totalStr,
   ];
+  if(shipLoc&&(shipLoc.street||shipLoc.label)){
+    bodyLines.push('');
+    bodyLines.push('Please send restocks to:');
+    if(shipLoc.label) bodyLines.push(shipLoc.label);
+    const addr=formatShipAddress(shipLoc);
+    if(addr) addr.split('\n').forEach(l=>bodyLines.push(l));
+  }
+  bodyLines.push('');
+  bodyLines.push('Thank you,');
+  if(rep.name) bodyLines.push(rep.name);
   const body=bodyLines.join('\n');
 
   const mailto='mailto:'+CURVAFIX_SUPPORT_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
