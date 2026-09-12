@@ -254,9 +254,10 @@ textarea{resize:vertical;min-height:56px}
     <input type="text" id="c-fix-other-txt" placeholder="Specify..." style="margin-top:10px;font-size:14px">
   </div></div>
   <div class="total-bar"><span class="tl">Total Invoice</span><span class="tv" id="f-total">$0.00</span></div>
-  <div class="pdf-hint"><strong>📄 How it works on iPhone</strong>Tap Generate PDF → Safari opens the PDF → tap <strong>Share ↑ → Save to Files</strong> or Mail → tap <strong>Back</strong> to return to the app. Your case auto-saves before navigating.</div>
+  <div class="pdf-hint"><strong>📄 How it works on iPhone</strong>Tap Generate PDF → Safari opens the PDF → tap <strong>Share ↑ → Save to Files</strong> → tap <strong>Email CurvaFix</strong> below to open a pre-filled message, attach the saved PDF, then send → tap <strong>Back</strong> to return to the app. Your case auto-saves before navigating.</div>
   <button class="gen-btn" onclick="saveCase()" style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f);margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save Case</button>
   <button class="gen-btn" onclick="generatePDF()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Generate PDF</button>
+  <button class="gen-btn" onclick="emailCurvaFix()" style="background:linear-gradient(135deg,#6b46c1,#8b5cf6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>Email CurvaFix</button>
   <div id="saved-cases-wrap" style="margin-top:14px"></div>
 </div>
 
@@ -1093,6 +1094,40 @@ async function generatePDF(){
     const url=URL.createObjectURL(blob);
     window.location.href=url;
   }catch(e){hideOverlay();showToast('Error: '+e.message);console.error(e);}
+}
+
+// ── EMAIL CURVAFIX ──
+const CURVAFIX_SUPPORT_EMAIL='support@curvafix.com';
+function emailCurvaFix(){
+  const s=loadSettings();
+  const hosp=s.hospitals[selectedHospital]||{name:'',city:'',surgeons:[]};
+  const surgeonName=hosp.surgeons[selectedSurgeon]||'';
+  const rep=s.rep||{};
+  const dateRaw=document.getElementById('f-date').value;
+  const dateStr=dateRaw?(()=>{const[y,m,d]=dateRaw.split('-');return m+'-'+d+'-'+y.slice(2)})():'';
+  const total=items.reduce((sum,it)=>sum+it.price*it.qty,0);
+  const totalStr='$'+total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  const subjectParts=['DGF Form',surgeonName,hosp.name,dateStr].filter(Boolean);
+  const subject=subjectParts.join(' - ')||'DGF Form';
+
+  const bodyLines=[
+    'Hi CurvaFix team,','',
+    'Attached is the completed U.S. Delivered Goods Form for the case below.','',
+    'Surgeon: '+(surgeonName||'—'),
+    'Hospital: '+(hosp.name||'—')+(hosp.city?(', '+hosp.city):''),
+    'Date of Surgery: '+(dateStr||'—'),
+    'Total Invoice: '+totalStr,'',
+    'Thanks,',
+    rep.name||'',
+    [rep.phone,rep.email].filter(Boolean).join(' | '),
+    rep.agent||'',
+  ];
+  const body=bodyLines.join('\n');
+
+  const mailto='mailto:'+CURVAFIX_SUPPORT_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  showToast('Opening Mail — attach the PDF you saved, then send');
+  setTimeout(()=>{ window.location.href=mailto; },600);
 }
 
 // ── HELPERS ──
