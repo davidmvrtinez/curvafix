@@ -1302,6 +1302,37 @@ async function buildFilledPdf(){
     function chk(n,checked){try{const f=form.getCheckBox(n);if(checked)f.check();else f.uncheck();}catch(e){}}
     function getRect(n){try{const f=form.getField(n);return f.acroField.getWidgets()[0].getRectangle();}catch(e){return null;}}
 
+    // Word-wrap + shrink-to-fit so long patient stickers are never cut off
+    function wrapLines(text,fnt,size,maxW){
+      const out=[];
+      String(text).split(/\r?\n/).forEach(par=>{
+        const words=par.split(/\s+/).filter(Boolean);
+        if(!words.length){out.push('');return;}
+        let cur='';
+        words.forEach(w=>{
+          while(fnt.widthOfTextAtSize(w,size)>maxW&&w.length>1){
+            let k=w.length-1;while(k>1&&fnt.widthOfTextAtSize(w.slice(0,k),size)>maxW)k--;
+            if(cur){out.push(cur);cur='';}
+            out.push(w.slice(0,k));w=w.slice(k);
+          }
+          const tt=cur?cur+' '+w:w;
+          if(fnt.widthOfTextAtSize(tt,size)<=maxW) cur=tt; else{out.push(cur);cur=w;}
+        });
+        if(cur) out.push(cur);
+      });
+      return out;
+    }
+    function fitText(text,rect,maxSize,minSize){
+      if(!rect) return {size:maxSize,lines:String(text).split('\n')};
+      const maxW=rect.width-8,maxH=rect.height-4;
+      for(let sz=maxSize;sz>=minSize;sz-=0.5){
+        const lines=wrapLines(text,font,sz,maxW);
+        if(lines.length*(sz+1.5)<=maxH) return {size:sz,lines};
+      }
+      return {size:minSize,lines:wrapLines(text,font,minSize,maxW)};
+    }
+    const patientText=document.getElementById('f-patient').value.replace(/[^\x09\x0a\x0d\x20-\x7e\xa0-\xff]/g,'?');
+
     // capture rects for header + row fields before any page duplication
     const HEADER_FIELD_NAMES=['Surgeon Name','Agent Name','Hosp Name','City, State','Rep Name, Number, Email','Date of Surgery','Hosp. PO','Patient Identification Sticker'];
     const headerRects={};HEADER_FIELD_NAMES.forEach(n=>headerRects[n]=getRect(n));
@@ -1346,7 +1377,11 @@ async function buildFilledPdf(){
     const repText=(rep.name||'')+'\n'+(rep.phone||'')+'\n'+(rep.email||'');
     s2('Rep Name, Number, Email',repText,9);
     s2('Date of Surgery',dateStr);s2('Hosp. PO',document.getElementById('f-po').value);
-    s2('Patient Identification Sticker',document.getElementById('f-patient').value);
+    try{
+      const pf=form.getTextField('Patient Identification Sticker');
+      const fit=fitText(patientText,headerRects['Patient Identification Sticker'],10,4.5);
+      pf.enableMultiline();pf.setFontSize(fit.size);pf.setText(fit.lines.join('\n'));
+    }catch(e){console.error('patient field',e);}
     s2('Notes',document.getElementById('f-notes').value);s2('OR Signature',document.getElementById('f-sig').value);
 
     // page 1 items (first 5 — row 6 is left unused, it's too small for a full description)
@@ -1392,7 +1427,13 @@ async function buildFilledPdf(){
       drawInRect(repText,headerRects['Rep Name, Number, Email'],8);
       drawInRect(dateStr,headerRects['Date of Surgery'],8);
       drawInRect('(continued — page '+p+')',headerRects['Hosp. PO'],8);
-      drawInRect(document.getElementById('f-patient').value,headerRects['Patient Identification Sticker'],7);
+      {
+        const pr=headerRects['Patient Identification Sticker'];
+        if(pr&&patientText){
+          const fit=fitText(patientText,pr,10,4.5);
+          fit.lines.forEach((ln,i)=>page.drawText(ln,{x:pr.x+3,y:pr.y+pr.height-fit.size-2-i*(fit.size+1.5),size:fit.size,font}));
+        }
+      }
 
       const slice=items.slice((p-1)*5,p*5);
       slice.forEach((it,i)=>{
