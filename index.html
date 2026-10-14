@@ -87,6 +87,8 @@ textarea{resize:vertical;min-height:56px}
 
 /* form page */
 .surg-row{display:flex;gap:8px;flex-wrap:wrap}
+.card.missing{border-color:#dc2626!important;box-shadow:0 0 0 2px #fecaca}
+input.missing,textarea.missing{border-color:#dc2626!important;background:#fef2f2!important}
 .surg-btn{flex:1;min-width:110px;padding:10px 8px;border:2px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;text-align:left}
 .surg-btn.active{border-color:var(--blue2);background:#e8f2ff}
 .sn{font-weight:700;font-size:13px;color:var(--blue)}.sh{font-size:11px;color:var(--muted);margin-top:2px}
@@ -202,18 +204,19 @@ textarea{resize:vertical;min-height:56px}
 <!-- FORM PAGE -->
 <div class="page" id="page-form">
   <button onclick="clearCase()" style="width:100%;padding:12px;background:#fee2e2;color:#c53030;border:1.5px solid #fca5a5;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-appearance:none;margin-bottom:12px">Clear All — Start New Case</button>
-  <div class="card"><div class="card-hdr">Hospital</div><div class="card-body"><div class="surg-row" id="hosp-row"></div></div></div>
-  <div class="card"><div class="card-hdr">Surgeon</div><div class="card-body"><div class="surg-row" id="surg-row"></div></div></div>
-  <div class="card"><div class="card-hdr">Case Info</div><div class="card-body">
+  <div id="val-banner" style="display:none;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#991b1b;font-size:13px;line-height:1.5"></div>
+  <div class="card" id="card-hosp"><div class="card-hdr">Hospital <span style="color:#dc2626">&nbsp;*</span></div><div class="card-body"><div class="surg-row" id="hosp-row"></div></div></div>
+  <div class="card" id="card-surg"><div class="card-hdr">Surgeon <span style="color:#dc2626">&nbsp;*</span></div><div class="card-body"><div class="surg-row" id="surg-row"></div></div></div>
+  <div class="card" id="card-case"><div class="card-hdr">Case Info</div><div class="card-body">
     <div class="row2" style="margin-bottom:10px">
-      <div><label class="lbl">Date of Surgery</label><input type="date" id="f-date"></div>
+      <div><label class="lbl">Date of Surgery *</label><input type="date" id="f-date"></div>
       <div><label class="lbl">Hospital PO #</label><input type="text" id="f-po" placeholder="Optional"></div>
     </div>
-    <div style="margin-bottom:10px"><label class="lbl">Patient Sticker Info</label><textarea id="f-patient" placeholder="Name, DOB, MRN..." rows="2"></textarea></div>
+    <div style="margin-bottom:10px"><label class="lbl">Patient Sticker Info *</label><textarea id="f-patient" placeholder="Name, DOB, MRN..." rows="2"></textarea></div>
     <div style="margin-bottom:10px"><label class="lbl">Notes</label><textarea id="f-notes" placeholder="Additional notes..." rows="2"></textarea></div>
     <div><label class="lbl">O.R. Signature</label><input type="text" id="f-sig" placeholder="Surgeon / OR staff name"></div>
   </div></div>
-  <div class="card"><div class="card-hdr">Procedure Type</div><div class="card-body">
+  <div class="card" id="card-proc"><div class="card-hdr">Procedure Type <span style="color:#dc2626">&nbsp;*</span></div><div class="card-body">
     <div class="chk-grid">
       <label class="chk-item"><input type="checkbox" id="c-high"><span>High Energy</span></label>
       <label class="chk-item"><input type="checkbox" id="c-frag"><span>Fragility</span></label>
@@ -224,7 +227,7 @@ textarea{resize:vertical;min-height:56px}
     </div>
     <input type="text" id="c-proc-other-txt" placeholder="Specify..." style="margin-top:10px;font-size:14px">
   </div></div>
-  <div class="card"><div class="card-hdr">Demographics</div><div class="card-body">
+  <div class="card" id="card-demo"><div class="card-hdr">Demographics <span style="color:#dc2626">&nbsp;*</span></div><div class="card-body">
     <div class="chk-grid">
       <label class="chk-item"><input type="checkbox" id="c-male"><span>Male</span></label>
       <label class="chk-item"><input type="checkbox" id="c-female"><span>Female</span></label>
@@ -232,7 +235,7 @@ textarea{resize:vertical;min-height:56px}
       <label class="chk-item"><input type="checkbox" id="c-65p"><span>65+ years</span></label>
     </div>
   </div></div>
-  <div class="card"><div class="card-hdr">Implant Location(s)</div><div class="card-body">
+  <div class="card" id="card-loc"><div class="card-hdr">Implant Location(s) <span style="color:#dc2626">&nbsp;*</span></div><div class="card-body">
     <div class="sec-label" style="margin-top:0">Pelvic Ring</div>
     <div class="chk-grid" style="margin-bottom:14px">
       <label class="chk-item"><input type="checkbox" id="c-ant-ring"><span>Anterior Ring – Pubic Ramus</span></label>
@@ -273,7 +276,7 @@ textarea{resize:vertical;min-height:56px}
   </div></div>
   <div class="total-bar"><span class="tl">Total Invoice</span><span class="tv" id="f-total">$0.00</span></div>
   <div class="pdf-hint"><strong>📄 How it works on iPhone</strong>Tap Generate PDF → Safari opens the PDF → tap <strong>Share ↑ → Save to Files</strong> → tap <strong>Email CurvaFix</strong> below to open a pre-filled message, attach the saved PDF, then send → tap <strong>Back</strong> to return to the app. Your case auto-saves before navigating. <strong>Android:</strong> the PDF downloads to your Downloads folder and you stay in the app — then tap Email CurvaFix and attach it.</div>
-  <button class="gen-btn" onclick="saveCase()" style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f);margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save Case</button>
+  <button class="gen-btn" onclick="saveCase(true)" style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f);margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save as Draft</button>
   <button class="gen-btn" onclick="generatePDF()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Generate PDF</button>
   <button class="gen-btn" onclick="emailCurvaFix()" style="background:linear-gradient(135deg,#6b46c1,#8b5cf6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>Email CurvaFix</button>
   <div id="saved-cases-wrap" style="margin-top:14px"></div>
@@ -396,7 +399,7 @@ const GTIN_MAP={
   '10855068008508':'GPS-001','10855068008515':'GPT-001','10855068008157':'CGP-001',
 };
 
-let items=[],scanning=false,lastCode='',lastCodeTime=0,selectedHospital=0,selectedSurgeon=0,dupResolve=null;
+let items=[],scanning=false,lastCode='',lastCodeTime=0,selectedHospital=-1,selectedSurgeon=-1,dupResolve=null;
 
 // ── SETTINGS (hospitals[] each own surgeons[] + price list) ──
 function loadSettings(){
@@ -408,7 +411,7 @@ function loadSettings(){
     s={
       rep:{name:'David Martinez',phone:'954-464-3416',email:'Martinez7david@gmail.com',agent:'Allegiant Medical'},
       hospitals:[{id:1,name:'HCA Florida Ocala',city:'Ocala, FL',surgeons:['Dr. Siebuhr','Dr. McFadden'],priceList:null,gtinMap:null,priceMeta:null}],
-      selectedHospital:0,selectedSurgeon:0
+      selectedHospital:-1,selectedSurgeon:-1
     };
   }
   // migrate old flat-surgeon format (surgeon carried its own hospital/city) into hospitals[]
@@ -437,12 +440,12 @@ function loadSettings(){
     }catch(e){}
     localStorage.removeItem('cf_pricelist');localStorage.removeItem('cf_gtinmap');localStorage.removeItem('cf_pricelist_meta');
     delete s.surgeons;
-    s.selectedHospital=0;s.selectedSurgeon=0;
+    s.selectedHospital=-1;s.selectedSurgeon=-1;
     localStorage.setItem('cf_s',JSON.stringify(s));
   }
   if(!s.hospitals) s.hospitals=[];
-  if(s.selectedHospital==null) s.selectedHospital=0;
-  if(s.selectedSurgeon==null) s.selectedSurgeon=0;
+  if(s.selectedHospital==null) s.selectedHospital=-1;
+  if(s.selectedSurgeon==null) s.selectedSurgeon=-1;
   if(!s.shippingLocations) s.shippingLocations=[];
   if(s.selectedShipping==null) s.selectedShipping=0;
   return s;
@@ -458,12 +461,18 @@ function saveSettings(s){localStorage.setItem('cf_s',JSON.stringify(s));}
 function getActiveHospital(){const s=loadSettings();return s.hospitals[s.selectedHospital]||null;}
 function getActivePriceList(){const h=getActiveHospital();return(h&&h.priceList)||PRICE_LIST;}
 function getActiveGtinMap(){const h=getActiveHospital();return(h&&h.gtinMap)||GTIN_MAP;}
+// Scanning happens before the hospital is chosen, so recognition uses every known list;
+// prices are only resolved against the chosen hospital's list (see repriceItems).
+function getAnyPriceList(){const m=Object.assign({},PRICE_LIST);loadSettings().hospitals.forEach(h=>{if(h.priceList)Object.assign(m,h.priceList);});return m;}
+function getAnyGtinMap(){const m=Object.assign({},GTIN_MAP);loadSettings().hospitals.forEach(h=>{if(h.gtinMap)Object.assign(m,h.gtinMap);});return m;}
+function priceFor(ref){const h=getActiveHospital();if(!h||!ref)return 0;const i=(h.priceList||PRICE_LIST)[String(ref).toUpperCase()];return i?i.price:0;}
+function repriceItems(){items.forEach(it=>{if(it.ref) it.price=priceFor(it.ref);});}
 
 function renderActiveHospitalIndicator(){
   const el=document.getElementById('active-hosp-indicator');
   if(!el) return;
   const h=getActiveHospital();
-  el.textContent=h?('Pricing for: '+h.name+(h.priceMeta?' (custom list)':' (default list)')):'No hospital selected — set one in the Form tab';
+  el.textContent=h?('Case hospital: '+h.name):'Choose the hospital on the Form tab — pricing is applied there';
 }
 
 // ── PER-HOSPITAL PRICE LIST UPLOAD ──
@@ -855,7 +864,7 @@ async function onCode(raw){
     return;
   }
   // Unknown item — GTIN/lot found but not in price list
-  if(!item.ref || item.price===0){
+  if(!item.ref){
     lastCode='';
     flashWrap(false);
     const action=await showUnkModal(item, raw);
@@ -927,13 +936,13 @@ function parseGS1(raw){
     }
   }
 
-  const activePL=getActivePriceList(),activeGM=getActiveGtinMap();
+  const activePL=getAnyPriceList(),activeGM=getAnyGtinMap();
   if(gtin&&activeGM[gtin]) ref=activeGM[gtin];
   if(!ref){for(const r of Object.keys(activePL)){if(raw.includes(r)){ref=r;break;}}}
   if(!ref&&!lot&&!gtin) return null;
   const info=ref?activePL[ref]:null;
   return{name:info?info.name:(ref||'Unknown Product'),ref:ref||'',lot:lot||'',exp:exp||'',qty:1,
-    price:info?info.price:0,disposition:ref&&ref.startsWith('CRS')?'implanted':'blank'};
+    price:priceFor(ref),disposition:ref&&ref.startsWith('CRS')?'implanted':'blank'};
 }
 
 // ── PHOTO FALLBACK ──
@@ -1002,16 +1011,16 @@ function unkAction(a){document.getElementById('unk-modal').classList.remove('sho
 
 // ── MANUAL ──
 function toggleManual(btn){const b=document.getElementById('manual-body');const o=b.style.display==='block';b.style.display=o?'none':'block';btn.textContent=o?'+ Add Manually':'▲ Hide Manual Entry';}
-function autofillRef(){const ref=document.getElementById('manual-ref').value.trim().toUpperCase();const info=getActivePriceList()[ref];if(info)document.getElementById('manual-desc').value=info.name;}
+function autofillRef(){const ref=document.getElementById('manual-ref').value.trim().toUpperCase();const info=getAnyPriceList()[ref];if(info)document.getElementById('manual-desc').value=info.name;}
 function addManualItem(){
   const ref=document.getElementById('manual-ref').value.trim();
   const desc=document.getElementById('manual-desc').value.trim();
   if(!desc&&!ref){showToast('Enter a name or REF#');return;}
-  const info=getActivePriceList()[ref.toUpperCase()]||null;
+  const info=getAnyPriceList()[ref.toUpperCase()]||null;
   commitItem({name:info?info.name:desc,ref,lot:document.getElementById('manual-lot').value.trim(),
     exp:document.getElementById('manual-exp').value.trim(),
     qty:parseInt(document.getElementById('manual-qty').value)||1,
-    price:info?info.price:0,disposition:document.getElementById('manual-disp').value});
+    price:priceFor(ref),disposition:document.getElementById('manual-disp').value});
   ['manual-ref','manual-desc','manual-lot','manual-exp'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('manual-qty').value='1';
 }
@@ -1039,25 +1048,25 @@ function renderItems(){
           <option value="implanted_removed" ${it.disposition==='implanted_removed'?'selected':''}>Impl. &amp; Removed</option>
           <option value="blank" ${it.disposition==='blank'?'selected':''}>— blank</option>
         </select>
-        <span class="ptag">$${(it.price*it.qty).toLocaleString()}</span>
       </div>
     </div>`).join('');
   const s=document.getElementById('items-list');s.scrollTop=s.scrollHeight;
 }
-function updateTotal(){const t=items.reduce((s,it)=>s+it.price*it.qty,0);document.getElementById('f-total').textContent='$'+t.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+function updateTotal(){repriceItems();const t=items.reduce((s,it)=>s+it.price*it.qty,0);document.getElementById('f-total').textContent='$'+t.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
 
 // ── HOSPITALS & SURGEONS (form page cascading picker) ──
 function renderHospitalBtns(){
-  const s=loadSettings();selectedHospital=s.selectedHospital||0;
+  const s=loadSettings();selectedHospital=(s.selectedHospital==null?-1:s.selectedHospital);
   const row=document.getElementById('hosp-row');
   if(!s.hospitals.length){row.innerHTML='<div style="color:var(--muted);font-size:13px">No hospitals — add in Settings.</div>';document.getElementById('surg-row').innerHTML='';return;}
-  if(selectedHospital>=s.hospitals.length) selectedHospital=0;
+  if(selectedHospital>=s.hospitals.length) selectedHospital=-1;
   row.innerHTML=s.hospitals.map((h,i)=>`<button class="surg-btn ${i===selectedHospital?'active':''}" onclick="selectHospital(${i})"><div class="sn">${h.name||'(unnamed)'}</div><div class="sh">${h.city||''}</div></button>`).join('');
   renderSurgeonBtnsForHospital();
 }
 function selectHospital(i){
-  selectedHospital=i;selectedSurgeon=0;
-  const s=loadSettings();s.selectedHospital=i;s.selectedSurgeon=0;saveSettings(s);
+  selectedHospital=i;selectedSurgeon=-1;
+  const s=loadSettings();s.selectedHospital=i;s.selectedSurgeon=-1;saveSettings(s);
+  repriceItems();updateTotal();saveItems();
   document.querySelectorAll('#hosp-row .surg-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
   renderSurgeonBtnsForHospital();
   renderActiveHospitalIndicator();
@@ -1066,9 +1075,10 @@ function renderSurgeonBtnsForHospital(){
   const s=loadSettings();
   const h=s.hospitals[selectedHospital];
   const row=document.getElementById('surg-row');
-  if(!h||!h.surgeons.length){row.innerHTML='<div style="color:var(--muted);font-size:13px">No surgeons for this hospital — add in Settings.</div>';return;}
-  selectedSurgeon=s.selectedSurgeon||0;
-  if(selectedSurgeon>=h.surgeons.length) selectedSurgeon=0;
+  if(!h){row.innerHTML='<div style="color:var(--muted);font-size:13px">Select a hospital first.</div>';return;}
+  if(!h.surgeons.length){row.innerHTML='<div style="color:var(--muted);font-size:13px">No surgeons for this hospital — add in Settings.</div>';return;}
+  selectedSurgeon=(s.selectedSurgeon==null?-1:s.selectedSurgeon);
+  if(selectedSurgeon>=h.surgeons.length) selectedSurgeon=-1;
   row.innerHTML=h.surgeons.map((name,i)=>`<button class="surg-btn ${i===selectedSurgeon?'active':''}" onclick="selectSurgeon(${i})"><div class="sn">${name}</div></button>`).join('');
 }
 function selectSurgeon(i){
@@ -1250,6 +1260,7 @@ function dispFieldName(disposition,r){
 // Builds the filled PDF from current form/item state. Shared by the "Generate PDF" (view/save)
 // flow and the "Email CurvaFix" (share sheet) flow so each can be triggered by its own fresh tap.
 async function buildFilledPdf(){
+  repriceItems();
   const s=loadSettings();
   const hosp=s.hospitals[selectedHospital]||{name:'',city:'',surgeons:[]};
   const surgeon={name:hosp.surgeons[selectedSurgeon]||'',hospital:hosp.name||'',city:hosp.city||''};
@@ -1382,6 +1393,7 @@ async function buildFilledPdf(){
 }
 
 async function generatePDF(){
+  if(!requireComplete()) return;
   showOverlay('Generating PDF...');
   try{
     const {bytes,filename}=await buildFilledPdf();
@@ -1405,6 +1417,50 @@ async function generatePDF(){
   }catch(e){hideOverlay();showToast('Error: '+e.message);console.error(e);}
 }
 
+// ── REQUIRED-FIELD VALIDATION ──
+const PROC_IDS=['c-high','c-frag','c-onco','c-hip','c-hwrev','c-proc-other'];
+const LOC_IDS=['c-ant-ring','c-post-ring','c-dysmorphic','c-lc2','c-ant-col','c-post-col'];
+function anyChecked(ids){return ids.some(id=>{const e=document.getElementById(id);return e&&e.checked;});}
+function getMissingFields(){
+  const m=[];
+  const s=loadSettings();
+  const h=s.hospitals[selectedHospital];
+  if(!h) m.push({label:'Hospital',el:'card-hosp'});
+  if(!h||!h.surgeons[selectedSurgeon]) m.push({label:'Surgeon',el:'card-surg'});
+  if(!document.getElementById('f-date').value) m.push({label:'Date of Surgery',el:'f-date'});
+  if(!document.getElementById('f-patient').value.trim()) m.push({label:'Patient Sticker Info',el:'f-patient'});
+  const otherOn=document.getElementById('c-proc-other').checked;
+  if(!anyChecked(PROC_IDS)) m.push({label:'Procedure Type',el:'card-proc'});
+  else if(otherOn&&!anyChecked(PROC_IDS.slice(0,5))&&!document.getElementById('c-proc-other-txt').value.trim()) m.push({label:'Procedure Type (specify Other)',el:'card-proc'});
+  const sex=anyChecked(['c-male','c-female']),age=anyChecked(['c-u65','c-65p']);
+  if(!sex||!age) m.push({label:'Demographics ('+(!sex&&!age?'sex and age group':!sex?'sex':'age group')+')',el:'card-demo'});
+  if(!anyChecked(LOC_IDS)) m.push({label:'Implant Location(s)',el:'card-loc'});
+  return m;
+}
+function runValidation(showBanner){
+  const missing=getMissingFields();
+  ['card-hosp','card-surg','card-case','card-proc','card-demo','card-loc','f-date','f-patient'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('missing');});
+  const b=document.getElementById('val-banner');
+  if(!missing.length||!showBanner){ if(b) b.style.display='none'; return missing; }
+  missing.forEach(x=>{const e=document.getElementById(x.el);if(e)e.classList.add('missing');});
+  b.innerHTML='<strong>Required before generating the PDF:</strong><br>'+missing.map(x=>'• '+x.label).join('<br>')+'<br><span style="color:#7f1d1d">Not ready? Tap <strong>Save as Draft</strong> at the bottom and finish later.</span>';
+  b.style.display='block';
+  return missing;
+}
+function requireComplete(){
+  const missing=runValidation(true);
+  if(!missing.length) return true;
+  showToast('Missing: '+missing.map(x=>x.label.replace(/ \(.*/,'')).join(', '));
+  const b=document.getElementById('val-banner');
+  if(b) b.scrollIntoView({behavior:'smooth',block:'start'});
+  return false;
+}
+// keep the checklist current while the user fills things in (only once it has been shown)
+function revalidateIfShown(){const b=document.getElementById('val-banner');if(b&&b.style.display!=='none') runValidation(true);}
+document.addEventListener('change',revalidateIfShown);
+document.addEventListener('input',revalidateIfShown);
+document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.surg-btn'))setTimeout(revalidateIfShown,0);});
+
 // ── EMAIL CURVAFIX ──
 const CURVAFIX_SUPPORT_EMAIL='support@curvafix.com';
 function buildEmailContent(){
@@ -1414,21 +1470,14 @@ function buildEmailContent(){
   const rep=s.rep||{};
   const dateRaw=document.getElementById('f-date').value;
   const dateStr=dateRaw?(()=>{const[y,m,d]=dateRaw.split('-');return m+'-'+d+'-'+y.slice(2)})():'';
-  const total=items.reduce((sum,it)=>sum+it.price*it.qty,0);
-  const totalStr='$'+total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-
-  const subjectParts=[surgeonName,hosp.name,dateStr].filter(Boolean);
-  const subject=subjectParts.join(' - ')||'DGF Form';
+  const subjectDate=dateStr?dateStr.replace(/-/g,'/'):'';
+  const subject=['CurvaFix DGF',surgeonName,subjectDate].filter(Boolean).join(' ');
 
   const shipLoc=(s.shippingLocations||[])[s.selectedShipping||0]||null;
 
   const bodyLines=[
-    'Hi CurvaFix team,','',
-    'Attached is the completed U.S. Delivered Goods Form for the case below.','',
-    'Surgeon: '+(surgeonName||'—'),
-    'Hospital: '+(hosp.name||'—')+(hosp.city?(', '+hosp.city):''),
-    'Date of Surgery: '+(dateStr||'—'),
-    'Total Invoice: '+totalStr,
+    'Hi,','',
+    'Attached is the completed DGF form from my case'+(surgeonName?(' with '+surgeonName):'')+(hosp.name?(' at '+hosp.name):'')+'.',
   ];
   if(shipLoc&&(shipLoc.street||shipLoc.label)){
     bodyLines.push('');
@@ -1443,6 +1492,7 @@ function buildEmailContent(){
 }
 
 function emailCurvaFix(){
+  if(!requireComplete()) return;
   const {subject,body}=buildEmailContent();
   const mailto='mailto:'+CURVAFIX_SUPPORT_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   showToast('Opening Mail — attach the PDF you saved, then send');
@@ -1458,6 +1508,10 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 function clearCase(){
   if(!confirm('Clear all current case data? This cannot be undone.')) return;
   items=[];renderItems();updateTotal();saveItems();
+  selectedHospital=-1;selectedSurgeon=-1;
+  {const s=loadSettings();s.selectedHospital=-1;s.selectedSurgeon=-1;saveSettings(s);}
+  localStorage.removeItem('cf_curcase');
+  renderHospitalBtns();renderActiveHospitalIndicator();runValidation(false);
   ['f-date','f-po','f-patient','f-notes','f-sig','c-proc-other-txt','c-fix-other-txt'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
@@ -1472,15 +1526,19 @@ function clearCase(){
 }
 
 // ── SAVED CASES ──
-function saveCase(){
+function saveCase(manual){
+  repriceItems();
   const s=loadSettings();
-  const hosp=s.hospitals[selectedHospital]||{name:'Unknown',surgeons:[]};
-  const surgeonName=hosp.surgeons[selectedSurgeon]||'Unknown';
+  const hosp=s.hospitals[selectedHospital]||{name:'No hospital',surgeons:[]};
+  const surgeonName=hosp.surgeons[selectedSurgeon]||'No surgeon';
+  const isDraft=getMissingFields().length>0;
   const dateVal=document.getElementById('f-date').value;
   const dateStr=dateVal?(()=>{const[y,m,d]=dateVal.split('-');return m+'-'+d+'-'+y.slice(2)})():'No date';
   const caseName=surgeonName+' · '+hosp.name+' · '+dateStr;
+  const curId=parseInt(localStorage.getItem('cf_curcase')||'0')||0;
   const caseData={
-    id:Date.now(),
+    id:curId||Date.now(),
+    draft:isDraft,
     name:caseName,
     hospital:selectedHospital,
     surgeon:selectedSurgeon,
@@ -1501,12 +1559,14 @@ function saveCase(){
     const el=document.getElementById(id);
     if(el) caseData.checks[id]=el.type==='checkbox'?el.checked:el.value;
   });
-  const cases=JSON.parse(localStorage.getItem('cf_cases')||'[]');
+  let cases=JSON.parse(localStorage.getItem('cf_cases')||'[]');
+  cases=cases.filter(x=>x.id!==caseData.id); // saving the same case again updates it instead of duplicating
   cases.unshift(caseData);
+  localStorage.setItem('cf_curcase',String(caseData.id));
   if(cases.length>20) cases.pop(); // keep last 20
   localStorage.setItem('cf_cases',JSON.stringify(cases));
   renderSavedCases();
-  showToast('Case saved: '+caseName);
+  showToast((isDraft?'Draft saved: ':'Case saved: ')+caseName);
 }
 
 function loadCase(id){
@@ -1521,7 +1581,7 @@ function loadCase(id){
   if(c.hospital!=null){
     const s=loadSettings();
     s.selectedHospital=c.hospital;
-    s.selectedSurgeon=c.surgeon||0;
+    s.selectedSurgeon=(c.surgeon==null?-1:c.surgeon);
     saveSettings(s);
   }
   renderHospitalBtns();
@@ -1541,7 +1601,10 @@ function loadCase(id){
       if(el.type==='checkbox') el.checked=val; else el.value=val;
     });
   }
+  localStorage.setItem('cf_curcase',String(c.id));
+  repriceItems();updateTotal();saveItems();
   saveFormFields();
+  runValidation(false);
   showToast('Loaded: '+c.name);
 }
 
@@ -1563,7 +1626,7 @@ function renderSavedCases(){
     ${cases.map(c=>`
       <div style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:11px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div style="font-weight:700;font-size:13px;color:var(--blue)">${c.name}</div>
+          <div style="font-weight:700;font-size:13px;color:var(--blue)">${c.name}${c.draft?' <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 6px;border-radius:8px;margin-left:4px">DRAFT</span>':''}</div>
           <div style="font-size:11px;color:var(--muted)">${(c.items||[]).length} items · $${(c.items||[]).reduce((s,it)=>s+it.price*it.qty,0).toLocaleString()}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
