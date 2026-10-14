@@ -6,6 +6,7 @@
 <title>CurvaFix Form</title>
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://unpkg.com/@ericblade/quagga2@1.2.6/dist/quagga.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/barcode-detector@3.2.2/dist/iife/ponyfill.min.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <style>
@@ -147,11 +148,12 @@ textarea{resize:vertical;min-height:56px}
           <div class="aim-c bl"></div><div class="aim-c br"></div>
         </div></div>
       </div>
-      <div class="scan-hint">Hold 5–8 inches away · keep barcode inside the lines</div>
+      <div class="scan-hint">Hold 5–8 inches away · keep barcode inside the lines<span id="engine-label"></span></div>
       <div id="active-hosp-indicator" style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;font-weight:600"></div>
       <div id="debug-raw" style="display:none;margin-top:6px;background:#1a1a2e;color:#5bc8f5;border-radius:8px;padding:8px 10px;font-size:10px;font-family:monospace;word-break:break-all;line-height:1.5"></div>
       <div class="status-bar" id="status-bar"><div class="status-dot"></div><span id="status-msg">Tap Start to activate camera</span></div>
       <button class="scan-btn go" id="scan-toggle" onclick="toggleScanner()">▶ Start Scanner</button>
+      <button class="scan-btn" id="torch-btn" onclick="toggleTorch()" style="display:none;background:#f0f4f8;color:var(--blue2)">Flashlight</button>
       <div class="photo-link">
         <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(this)">
         <button onclick="document.getElementById('photo-input').click()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>Take photo of barcode instead</button>
@@ -270,7 +272,7 @@ textarea{resize:vertical;min-height:56px}
     </div>
   </div></div>
   <div class="total-bar"><span class="tl">Total Invoice</span><span class="tv" id="f-total">$0.00</span></div>
-  <div class="pdf-hint"><strong>📄 How it works on iPhone</strong>To email CurvaFix directly: tap <strong>Email CurvaFix</strong> below — the Share Sheet opens with the PDF already attached, just choose Mail and send. To just view or save the PDF instead: tap <strong>Generate PDF</strong> → Safari opens it → <strong>Share ↑ → Save to Files</strong> → tap <strong>Back</strong> to return. Your case auto-saves either way.</div>
+  <div class="pdf-hint"><strong>📄 How it works on iPhone</strong>Tap Generate PDF → Safari opens the PDF → tap <strong>Share ↑ → Save to Files</strong> → tap <strong>Email CurvaFix</strong> below to open a pre-filled message, attach the saved PDF, then send → tap <strong>Back</strong> to return to the app. Your case auto-saves before navigating. <strong>Android:</strong> the PDF downloads to your Downloads folder and you stay in the app — then tap Email CurvaFix and attach it.</div>
   <button class="gen-btn" onclick="saveCase()" style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f);margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save Case</button>
   <button class="gen-btn" onclick="generatePDF()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Generate PDF</button>
   <button class="gen-btn" onclick="emailCurvaFix()" style="background:linear-gradient(135deg,#6b46c1,#8b5cf6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>Email CurvaFix</button>
@@ -632,10 +634,141 @@ function showPage(p){
   window.scrollTo(0,0);
 }
 
-// ── QUAGGA2 SCANNER ──
-function toggleScanner(){scanning?stopScanner():startScanner();}
+// ── SCANNER: native BarcodeDetector (Android Chrome built-in) → ZXing WASM (iPhone) → Quagga fallback ──
+let scanStream=null,scanVideo=null,scanDetector=null,scanEngine='',scanTimer=null,scanBusy=false,scanErrCount=0,torchOn=false,scanToken=0,scanStarting=false,quaggaRunning=false;
 
-function startScanner(){
+function toggleScanner(){if(scanStarting)return;scanning?stopScanner():startScanner();}
+
+async function getDetector(){
+  // 1) Native detector — on Android Chrome this is Google's own built-in barcode engine
+  try{
+    if('BarcodeDetector' in window){
+      const fmts=await BarcodeDetector.getSupportedFormats();
+      if(fmts.includes('code_128')) return {det:new BarcodeDetector({formats:['code_128']}),name:'Built-in scanner'};
+    }
+  }catch(e){console.warn('Native BarcodeDetector unavailable',e);}
+  // 2) ZXing WebAssembly (what iPhone Safari uses — it has no native detector)
+  try{
+    if(window.BarcodeDetectionAPI&&BarcodeDetectionAPI.BarcodeDetector){
+      return {det:new BarcodeDetectionAPI.BarcodeDetector({formats:['code_128']}),name:'ZXing'};
+    }
+  }catch(e){console.warn('ZXing detector unavailable',e);}
+  return null;
+}
+
+// With several barcodes in view (sticker sheet), take the one closest to the middle of the frame
+function pickCentered(codes,video){
+  codes=(codes||[]).filter(c=>c.rawValue&&c.rawValue.length>=4);
+  if(!codes.length) return null;
+  const vw=video.videoWidth||1,vh=video.videoHeight||1;
+  let best=null,bd=1e12;
+  codes.forEach(c=>{
+    const b=c.boundingBox;
+    if(!b){if(!best){best=c;bd=0;}return;}
+    const dx=(b.x+b.width/2-vw/2)/vw,dy=(b.y+b.height/2-vh/2)/vh;
+    if(Math.abs(dx)>0.3||Math.abs(dy)>0.25) return;
+    const d=dx*dx+dy*dy;
+    if(d<bd){bd=d;best=c;}
+  });
+  return best;
+}
+
+async function startScanner(){
+  scanStarting=true;
+  const token=++scanToken;
+  setStatus('Starting camera...','active');
+  try{
+    const picked=await getDetector();
+    if(!picked||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      scanStarting=false;
+      startScannerQuagga();
+      return;
+    }
+    scanDetector=picked.det;scanEngine=picked.name;
+    let stream;
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});
+    }catch(err){
+      console.error(err);
+      setStatus('Camera blocked — allow camera access in your browser settings','err');
+      return;
+    }
+    if(token!==scanToken){stream.getTracks().forEach(t=>t.stop());return;} // user left the page / stopped while starting
+    scanStream=stream;
+    const host=document.getElementById('interactive');
+    host.innerHTML='';
+    scanVideo=document.createElement('video');
+    scanVideo.setAttribute('playsinline','');
+    scanVideo.muted=true;scanVideo.autoplay=true;
+    scanVideo.srcObject=stream;
+    host.appendChild(scanVideo);
+    try{await scanVideo.play();}catch(e){}
+    // continuous autofocus + flashlight where the browser exposes them (Android Chrome)
+    const track=stream.getVideoTracks()[0];
+    try{
+      const caps=track.getCapabilities?track.getCapabilities():{};
+      if(caps.focusMode&&caps.focusMode.includes('continuous')) await track.applyConstraints({advanced:[{focusMode:'continuous'}]});
+      document.getElementById('torch-btn').style.display=caps.torch?'block':'none';
+    }catch(e){}
+    scanning=true;scanErrCount=0;
+    const btn=document.getElementById('scan-toggle');
+    btn.textContent='⏹ Stop Scanner';btn.className='scan-btn stop';
+    document.getElementById('engine-label').textContent=' · '+scanEngine;
+    setStatus('Point barcode at the lines · hold steady','active');
+    scanLoop();
+  }finally{scanStarting=false;}
+}
+
+function scanLoop(){
+  clearInterval(scanTimer);
+  scanTimer=setInterval(async()=>{
+    if(!scanning||scanBusy||!scanVideo||scanVideo.readyState<2) return;
+    scanBusy=true;
+    try{
+      const codes=await scanDetector.detect(scanVideo);
+      scanErrCount=0;
+      const best=pickCentered(codes,scanVideo);
+      if(best) onCode(best.rawValue);
+    }catch(err){
+      console.error('detect failed',err);
+      if(++scanErrCount>=5) engineFailed();
+    }finally{scanBusy=false;}
+  },120);
+}
+
+function engineFailed(){
+  clearInterval(scanTimer);scanErrCount=0;
+  if(scanEngine==='Built-in scanner'&&window.BarcodeDetectionAPI&&BarcodeDetectionAPI.BarcodeDetector){
+    scanDetector=new BarcodeDetectionAPI.BarcodeDetector({formats:['code_128']});
+    scanEngine='ZXing';
+    document.getElementById('engine-label').textContent=' · ZXing';
+    scanLoop();
+  }else{
+    stopScanner();
+    startScannerQuagga();
+  }
+}
+
+async function toggleTorch(){
+  const track=scanStream&&scanStream.getVideoTracks()[0];
+  if(!track) return;
+  torchOn=!torchOn;
+  try{await track.applyConstraints({advanced:[{torch:torchOn}]});}
+  catch(e){torchOn=!torchOn;showToast('Flashlight not available on this phone');}
+  document.getElementById('torch-btn').textContent=torchOn?'Flashlight: On':'Flashlight';
+}
+
+// Last-resort engine (the original one) if neither native nor ZXing could load (e.g. offline on first use)
+function onQuaggaDetected(result){
+  const code=result.codeResult.code;
+  if(!code||code.length<4) return;
+  const errors=result.codeResult.decodedCodes.filter(c=>c.error!==undefined).map(c=>c.error);
+  const avgErr=errors.length?errors.reduce((a,b)=>a+b,0)/errors.length:1;
+  if(avgErr>0.25) return;
+  onCode(code);
+}
+function startScannerQuagga(){
+  scanEngine='Basic scanner';
   setStatus('Starting camera...','active');
   Quagga.init({
     inputStream:{
@@ -664,26 +797,28 @@ function startScanner(){
       return;
     }
     Quagga.start();
+    quaggaRunning=true;
     scanning=true;
     const btn=document.getElementById('scan-toggle');
     btn.textContent='⏹ Stop Scanner';btn.className='scan-btn stop';
+    document.getElementById('engine-label').textContent=' · basic scanner';
     setStatus('Point barcode at the lines · hold steady','active');
   });
 
-  Quagga.onDetected(function(result){
-    const code=result.codeResult.code;
-    const format=result.codeResult.format;
-    if(!code||code.length<4) return;
-    // require minimum confidence
-    const errors=result.codeResult.decodedCodes.filter(c=>c.error!==undefined).map(c=>c.error);
-    const avgErr=errors.length?errors.reduce((a,b)=>a+b,0)/errors.length:1;
-    if(avgErr>0.25) return; // low confidence, skip
-    onCode(code);
-  });
+  Quagga.offDetected(onQuaggaDetected);
+  Quagga.onDetected(onQuaggaDetected);
 }
 
 function stopScanner(){
-  if(scanning){Quagga.stop();scanning=false;}
+  scanToken++; // cancels any start-up still in progress
+  clearInterval(scanTimer);scanTimer=null;scanBusy=false;
+  if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}
+  if(scanVideo){scanVideo.srcObject=null;scanVideo=null;}
+  if(quaggaRunning){try{Quagga.stop();}catch(e){}quaggaRunning=false;}
+  scanning=false;torchOn=false;
+  const host=document.getElementById('interactive');if(host) host.innerHTML='';
+  const tb=document.getElementById('torch-btn');if(tb){tb.style.display='none';tb.textContent='Flashlight';}
+  const el=document.getElementById('engine-label');if(el) el.textContent='';
   const btn=document.getElementById('scan-toggle');
   btn.textContent='▶ Start Scanner';btn.className='scan-btn go';
   setStatus('Tap Start to activate camera','');
@@ -802,10 +937,33 @@ function parseGS1(raw){
 }
 
 // ── PHOTO FALLBACK ──
-function handlePhoto(input){
+async function handlePhoto(input){
   if(!input.files||!input.files[0])return;
   const file=input.files[0]; input.value='';
   showOverlay('Reading barcode...');
+  // Preferred: the same detectors the live scanner uses, on the full-resolution photo
+  try{
+    const picked=await getDetector();
+    if(picked){
+      let src=file;
+      try{
+        const bmp=await createImageBitmap(file);
+        const sc=Math.min(1,2400/Math.max(bmp.width,bmp.height));
+        if(sc<1){
+          const c=document.createElement('canvas');
+          c.width=Math.round(bmp.width*sc);c.height=Math.round(bmp.height*sc);
+          c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+          src=c;
+        }else src=bmp;
+      }catch(e){}
+      let codes=await picked.det.detect(src);
+      if((!codes||!codes.length)&&picked.name!=='ZXing'&&window.BarcodeDetectionAPI&&BarcodeDetectionAPI.BarcodeDetector){
+        codes=await new BarcodeDetectionAPI.BarcodeDetector({formats:['code_128']}).detect(src);
+      }
+      if(codes&&codes.length&&codes[0].rawValue){hideOverlay();onCode(codes[0].rawValue);return;}
+    }
+  }catch(e){console.error('Photo decode failed',e);}
+  // Last resort
   Quagga.decodeSingle({
     decoder:{readers:['code_128_reader','ean_reader']},
     locate:true,
@@ -1226,14 +1384,23 @@ async function buildFilledPdf(){
 async function generatePDF(){
   showOverlay('Generating PDF...');
   try{
-    const {bytes}=await buildFilledPdf();
+    const {bytes,filename}=await buildFilledPdf();
     // Save case automatically before navigating away
     saveCase();
     hideOverlay();
-    // iOS Safari blocks window.open() inside async — navigate current tab instead.
-    // localStorage saves everything so Back button restores full state.
     const blob=new Blob([bytes],{type:'application/pdf'});
     const url=URL.createObjectURL(blob);
+    if(/Android/i.test(navigator.userAgent)){
+      // Android Chrome has no inline PDF viewer — download it with a proper file name and stay in the app
+      const a=document.createElement('a');
+      a.href=url;a.download=filename;
+      document.body.appendChild(a);a.click();a.remove();
+      showToast('PDF saved to your Downloads folder');
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      return;
+    }
+    // iOS Safari blocks window.open() inside async — navigate current tab instead.
+    // localStorage saves everything so Back button restores full state.
     window.location.href=url;
   }catch(e){hideOverlay();showToast('Error: '+e.message);console.error(e);}
 }
@@ -1250,7 +1417,7 @@ function buildEmailContent(){
   const total=items.reduce((sum,it)=>sum+it.price*it.qty,0);
   const totalStr='$'+total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 
-  const subjectParts=['DGF Form',surgeonName,hosp.name,dateStr].filter(Boolean);
+  const subjectParts=[surgeonName,hosp.name,dateStr].filter(Boolean);
   const subject=subjectParts.join(' - ')||'DGF Form';
 
   const shipLoc=(s.shippingLocations||[])[s.selectedShipping||0]||null;
@@ -1266,7 +1433,6 @@ function buildEmailContent(){
   if(shipLoc&&(shipLoc.street||shipLoc.label)){
     bodyLines.push('');
     bodyLines.push('Please send restocks to:');
-    if(shipLoc.label) bodyLines.push(shipLoc.label);
     const addr=formatShipAddress(shipLoc);
     if(addr) addr.split('\n').forEach(l=>bodyLines.push(l));
   }
@@ -1276,42 +1442,11 @@ function buildEmailContent(){
   return {subject,body:bodyLines.join('\n')};
 }
 
-function openMailto(subject,body){
-  const mailto='mailto:'+CURVAFIX_SUPPORT_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-  setTimeout(()=>{ window.location.href=mailto; },300);
-}
-
-async function emailCurvaFix(){
+function emailCurvaFix(){
   const {subject,body}=buildEmailContent();
-
-  // Try the native Share Sheet first so the PDF attaches automatically — this has to build
-  // the PDF fresh (not reuse one from an earlier "Generate PDF" tap) so the share call stays
-  // inside this click's user-activation window on iOS Safari.
-  if(navigator.share){
-    showOverlay('Preparing PDF...');
-    try{
-      const {bytes,filename}=await buildFilledPdf();
-      const file=new File([bytes],filename,{type:'application/pdf'});
-      hideOverlay();
-      if(navigator.canShare&&navigator.canShare({files:[file]})){
-        try{
-          await navigator.share({files:[file],title:subject,text:body});
-          saveCase();
-          return;
-        }catch(shareErr){
-          if(shareErr&&shareErr.name==='AbortError') return; // user cancelled the share sheet — don't force mailto after
-          console.error('Share failed, falling back to email draft',shareErr);
-        }
-      }
-    }catch(e){
-      hideOverlay();console.error('PDF build for share failed',e);
-    }
-  }
-
-  // Fallback: open a pre-filled email (no attachment) — either Share isn't supported on this
-  // browser, or the share attempt failed for some other reason.
-  showToast('Opening Mail — attach your saved PDF, then send');
-  openMailto(subject,body);
+  const mailto='mailto:'+CURVAFIX_SUPPORT_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  showToast('Opening Mail — attach the PDF you saved, then send');
+  setTimeout(()=>{ window.location.href=mailto; },600);
 }
 
 // ── HELPERS ──
